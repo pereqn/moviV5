@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MOVI — прототип</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="topbar">
+        <div class="title" id="pageTitle">Главный экран</div>
+        <button class="iconbtn" id="calendarBtn" title="Календарь" aria-label="Открыть календарь">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6"></rect>
+            <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" stroke-width="1.6"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="datestrip" id="dateStrip"></div>
+      <div class="filterbar" id="filterBar" role="tablist" aria-label="Фильтр статуса">
+        <button class="fchip active" data-filter="all" role="tab" aria-selected="true">Все</button>
+        <button class="fchip" data-filter="active" role="tab" aria-selected="false">Активные</button>
+        <button class="fchip" data-filter="done" role="tab" aria-selected="false">Выполненные</button>
+      </div>
+      <div class="wkstats" id="weekStats"></div>
+      <div class="dmstats" id="dayMonthStats"></div>
+    </header>
+
+    <main class="content">
+      <!-- Home/day view -->
+      <section class="view active" id="view-home">
+        <div class="list" id="ordersList"></div>
+        <div class="empty" id="emptyDay" style="display:none">На выбранную дату заказов пока нет.</div>
+      </section>
+
+      <!-- Requests -->
+      <section class="view" id="view-requests">
+        <div class="hint">Заявки от клиентов. Нажмите, чтобы раскрыть и принять/отклонить.</div>
+        <div class="list" id="requestsList"></div>
+        <div class="empty" id="emptyReq" style="display:none">Заявок пока нет.</div>
+      </section>
+
+      <!-- Settings -->
+      <section class="view" id="view-settings">
+        <div class="settings">
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Тёмная тема</div>
+              <div class="setting-desc">Включить/выключить тёмный режим интерфейса</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="themeToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="nav">
+      <div class="navwrap">
+        <button class="navbtn active" data-nav="home" title="Принятые заказы (по дням)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="navbtn" data-nav="requests" title="Заявки">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 12l3-7h12l3 7v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7z" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 12h3a2 2 0 0 0 4 0h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="navbtn" data-nav="settings" title="Настройки">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2"/>
+            <path d="M19.4 15a7.97 7.97 0 0 0 .1-1 7.97 7.97 0 0 0-.1-1l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1l-.4-2.7h-4l-.4-2.7a8 8 0 0 0-1.7-1l-2.5-1-2 3.4L4.6 13a7.97 7.97 0 0 0-.1 1 7.97 7.97 0 0 0 .1 1l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="navbtn" id="addOrderBtn" title="Добавить заказ">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal" id="calendarModal" aria-hidden="true">
+    <div class="sheet">
+      <h3>Выбор даты</h3>
+      <div class="calendar-pop">
+        <input type="date" id="calendarInput">
+        <div class="subtle">Выберите дату, чтобы перейти к заказам этого дня.</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-close="calendarModal">Отмена</button>
+        <button class="btn primary" id="goToDate">Перейти</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="orderModal" aria-hidden="true">
+    <div class="sheet">
+      <h3>Добавить заказ</h3>
+      <div class="grid">
+        <input id="f_name" placeholder="Имя клиента">
+        <input id="f_phone" placeholder="Телефон">
+        <input id="f_address" placeholder="Адрес">
+        <div class="row">
+          <input id="f_price" type="number" min="0" placeholder="Цена (₽)">
+          <input id="f_time" type="time" placeholder="Время">
+        </div>
+        <select id="f_type">
+          <option value="мебель">Мебель</option>
+          <option value="техника">Техника</option>
+          <option value="прочее">Прочее</option>
+        </select>
+        <div class="row">
+          <select id="f_gate">
+            <option value="нет">Шлагбаум: Нет</option>
+            <option value="да">Шлагбаум: Да</option>
+          </select>
+          <select id="f_elevator">
+            <option value="нет">Лифт: Нет</option>
+            <option value="да">Лифт: Да</option>
+          </select>
+        </div>
+        <textarea id="f_comment" placeholder="Комментарий"></textarea>
+        <input type="date" id="f_date" placeholder="Дата">
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-close="orderModal">Отмена</button>
+        <button class="btn primary" id="saveOrder">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="editModal" aria-hidden="true">
+    <div class="sheet">
+      <h3>Редактировать заказ</h3>
+      <div class="grid">
+        <input id="e_name" placeholder="Имя клиента">
+        <input id="e_phone" placeholder="Телефон">
+        <input id="e_address" placeholder="Адрес">
+        <div class="row">
+          <input id="e_price" type="number" min="0" placeholder="Цена (₽)">
+          <input id="e_time" type="time" placeholder="Время">
+        </div>
+        <select id="e_type">
+          <option value="мебель">Мебель</option>
+          <option value="техника">Техника</option>
+          <option value="прочее">Прочее</option>
+        </select>
+        <div class="row">
+          <select id="e_gate">
+            <option value="нет">Шлагбаум: Нет</option>
+            <option value="да">Шлагбаум: Да</option>
+          </select>
+          <select id="e_elevator">
+            <option value="нет">Лифт: Нет</option>
+            <option value="да">Лифт: Да</option>
+          </select>
+        </div>
+        <textarea id="e_comment" placeholder="Комментарий"></textarea>
+        <input type="date" id="e_date" placeholder="Дата">
+      </div>
+      <div class="actions">
+        <button class="btn danger" id="deleteOrder">Удалить</button>
+        <div style="flex:1"></div>
+        <button class="btn ghost" data-close="editModal">Отмена</button>
+        <button class="btn primary" id="updateOrder">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><span></span></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
