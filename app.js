@@ -1,10 +1,13 @@
-// minimal app.js for V1.3 (core features)
+// MOVI V1.3.3 — Profile stats always render & auto-refresh + keep 1.3.2 fixes
 const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const fmt=(d)=>new Date(d).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
 const fmtDM=(d)=>new Date(d).toLocaleDateString('ru-RU',{day:'2-digit',month:'long'});
 const monthTitle=(y,m)=>new Date(y,m,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
 const todayISO=()=>new Date().toISOString().slice(0,10);
 const addDaysISO=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
+
+const TMA = (typeof window !== 'undefined' && window.Telegram && Telegram.WebApp) ? Telegram.WebApp : null;
+if (TMA) { try { TMA.ready(); } catch(e){} }
 
 let currentDate=todayISO(); let currentFilter='all';
 function saveLS(k,v){localStorage.setItem(k,JSON.stringify(v))}
@@ -29,12 +32,30 @@ if(!requests){requests=[{id:'r1',name:'Илья',phone:'+7 (900) 000-00-01',stre
                         {id:'r2',name:'Марина',phone:'+7 (900) 000-00-02',street:'Ленинский',house:'21',apt:'',type:'техника',time:'18:00',price:900,comment:'Стиралка, аккуратно',date:addDaysISO(todayISO(),1),gate:'да',elevator:'да',company:'',contact:'',customer_note:''}]};
 function persistAll(){saveLS('movi_orders',orders);saveLS('movi_requests',requests);saveLS('movi_settings',userSettings);saveLS('movi_profile',userProfile)}
 
+/* THEME */
 const prefersDark=window.matchMedia('(prefers-color-scheme: dark)');
-function applyTheme(){const m=userSettings.theme||'auto';let t=m;if(m==='auto') t=prefersDark.matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}
+function applyTheme(){
+  const mode=userSettings.theme||'auto';
+  let theme=mode;
+  if(mode==='auto'){ theme = prefersDark.matches ? 'dark' : 'light'; }
+  document.documentElement.setAttribute('data-theme', theme);
+}
 prefersDark.addEventListener('change',applyTheme); applyTheme();
 
+/* Settings UI */
+function syncSettingsUI(){
+  $("#themeSelect").value=userSettings.theme||'auto';
+  $("#cityInput").value=userSettings.city||'';
+  $("#callAppSelect").value=userSettings.callApp||'phone';
+  $("#mapAppSelect").value=userSettings.mapApp||'google';
+}
+$("#themeSelect")?.addEventListener('change',e=>{ userSettings.theme=e.target.value; saveLS('movi_settings',userSettings); applyTheme(); });
+$("#cityInput")?.addEventListener('input',e=>{ userSettings.city=e.target.value; saveLS('movi_settings',userSettings); renderDay(); renderRequests(); refreshProfileIfOpen(); });
+$("#callAppSelect")?.addEventListener('change',e=>{ userSettings.callApp=e.target.value; saveLS('movi_settings',userSettings); });
+$("#mapAppSelect")?.addEventListener('change',e=>{ userSettings.mapApp=e.target.value; saveLS('movi_settings',userSettings); });
+
+/* Date chips (home only) */
 const dateStrip=$("#dateStrip");
-function chipStatus(iso){const day=orders[iso]||[];return {hasActive: day.some(o=>o.status!=='done')}}
 function renderDateChips(){
   dateStrip.innerHTML='';
   const base=new Date(currentDate);
@@ -42,12 +63,14 @@ function renderDateChips(){
     const dt=new Date(base);dt.setDate(base.getDate()+off); const iso=dt.toISOString().slice(0,10);
     const label=dt.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'});
     const chip=document.createElement('button'); chip.className='chip'+(off===0?' active':'');
-    const {hasActive}=chipStatus(iso); const dot=document.createElement('span'); dot.className='dot '+(hasActive?'active':'');
-    chip.append(document.createTextNode(label),dot); chip.addEventListener('click',()=>{currentDate=iso; renderDateChips(); renderDay()});
+    const day=orders[iso]||[]; const dot=document.createElement('span'); dot.className='dot '+(day.some(o=>o.status!=='done')?'active':'');
+    chip.append(document.createTextNode(label),dot);
+    chip.addEventListener('click',()=>{currentDate=iso; renderDateChips(); renderDay()});
     dateStrip.appendChild(chip);
   });
 }
 
+/* Swipe navigation (home only) */
 let touchX=null,touchY=null;
 function onTouchStart(e){const t=e.touches?e.touches[0]:e; touchX=t.clientX; touchY=t.clientY}
 function onTouchEnd(e){
@@ -59,22 +82,37 @@ function onTouchEnd(e){
 document.addEventListener('touchstart',onTouchStart,{passive:true}); document.addEventListener('touchend',onTouchEnd,{passive:true});
 document.addEventListener('mousedown',onTouchStart); document.addEventListener('mouseup',onTouchEnd);
 
-function parseHM(s){ if(!s) return null; const [h,m]=s.split(':').map(n=>parseInt(n,10)); if(isNaN(h)||isNaN(m)) return null; return h*60+m }
-function findConflicts(day){ const slots=day.map((o,i)=>({i,t:parseHM(o.time)})).filter(x=>x.t!=null); const set=new Set(); for(let a=0;a<slots.length;a++){for(let b=a+1;b<slots.length;b++){ if(Math.abs(slots[a].t-slots[b].t)<=60){set.add(slots[a].i);set.add(slots[b].i)} }} return set }
-
-const svgPhone='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M22 16.92v2a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 3.08 4.18 2 2 0 0 1 5 2h2a2 2 0 0 1 2 1.72c.12.9.32 1.77.6 2.6a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.48-1.06a2 2 0 0 1 2.11-.45c.83.28 1.7.48 2.6.6A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const svgMap='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 3v15M15 6v15" stroke="currentColor" stroke-width="1.6"/></svg>';
-
-function statusBadge(s){const cls=s==='done'?'done':'active'; const txt=s==='done'?'ВЫПОЛНЕНО':'АКТИВНО'; return `<span class="badge ${cls}">${txt}</span>`}
-function buildFullAddress(o){ const city=userSettings.city?(userSettings.city+', '):''; const street=o.street||''; const house=o.house||''; const apt=o.apt?(', кв. '+o.apt):''; if(o.address&&!street) return o.address; return city+[street,house].filter(Boolean).join(' ')+apt }
+/* CALLS & MAPS */
 function digitsForURL(p){return (p||'').replace(/\D/g,'').replace(/^8/,'7')}
-function openCall(p){const d=digitsForURL(p); if(!d) return; if(userSettings.callApp==='whatsapp') window.location.href=`https://wa.me/${d}`; else if(userSettings.callApp==='telegram') window.location.href=`tg://resolve?phone=${d}`; else window.location.href=`tel:+${d}`}
-function makeMapUrl(a){const q=encodeURIComponent(a); if(userSettings.mapApp==='yandex') return `https://yandex.ru/maps/?text=${q}`; if(userSettings.mapApp==='2gis') return `https://2gis.ru/search/${q}`; return `https://www.google.com/maps/search/?api=1&query=${q}`}
+function tmaOpenLink(url){ if(TMA){ try{ TMA.openLink(url,{try_instant_view:false}); return true }catch(e){ return false } } window.location.href=url; return true }
+function tmaOpenTG(url){ if(TMA){ try{ TMA.openTelegramLink(url); return true }catch(e){ return false } } window.location.href=url; return true }
 
+function openCall(phone){
+  const d=digitsForURL(phone); if(!d) return;
+  const schemeTel = `tel:+${d}`;
+  const wa = `https://wa.me/${d}`;
+  const tg = `tg://resolve?phone=${d}`;
+
+  if (TMA) {
+    if (userSettings.callApp==='telegram') { if(!tmaOpenTG(tg)){ showToast('Не удалось открыть Telegram-профиль'); } return; }
+    if (userSettings.callApp==='whatsapp') { if(!tmaOpenLink(wa)){ showToast('Не удалось открыть WhatsApp'); } return; }
+    if (navigator.clipboard) { navigator.clipboard.writeText('+'+d).catch(()=>{}); }
+    showToast('Номер скопирован, открою Telegram');
+    tmaOpenTG(tg);
+    return;
+  }
+  try { window.location.href = schemeTel; } catch(e) { if (userSettings.callApp==='telegram') window.location.href = tg; else window.location.href = wa; }
+}
+
+function makeMapUrl(a){const q=encodeURIComponent(a); if(userSettings.mapApp==='yandex') return `https://yandex.ru/maps/?text=${q}`; if(userSettings.mapApp==='2gis') return `https://2gis.ru/search/${q}`; return `https://www.google.com/maps/search/?api=1&query=${q}`}
+function buildFullAddress(o){ const city=userSettings.city?(userSettings.city+', '):''; const street=o.street||''; const house=o.house||''; const apt=o.apt?(', кв. '+o.apt):''; if(o.address&&!street) return o.address; return city+[street,house].filter(Boolean).join(' ')+apt }
+
+/* RENDER */
+function statusBadge(s){const cls=s==='done'?'done':'active'; const txt=s==='done'?'ВЫПОЛНЕНО':'АКТИВНО'; return `<span class="badge ${cls}">${txt}</span>`}
 function cardHTML(item,i,dateISO){
   const fullAddr=buildFullAddress(item);
   return `<div class="card" data-index="${i}" data-date="${dateISO}">
-    <div class="kebab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill="currentColor"></circle><circle cx="12" cy="12" r="2" fill="currentColor"></circle><circle cx="12" cy="19" r="2" fill="currentColor"></circle></svg></div>
+    <div class="kebab" role="button" aria-label="Открыть меню"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill="currentColor"></circle><circle cx="12" cy="12" r="2" fill="currentColor"></circle><circle cx="12" cy="19" r="2" fill="currentColor"></circle></svg></div>
     <h4>${item.name} ${statusBadge(item.status)}</h4>
     <div class="line">Адрес: ${fullAddr}</div>
     <div class="line">Телефон: ${item.phone}</div>
@@ -84,8 +122,8 @@ function cardHTML(item,i,dateISO){
       <div class="meta">Шлагбаум: ${(item.gate||'нет')==='да'?'Да':'Нет'} · Лифт: ${(item.elevator||'нет')==='да'?'Да':'Нет'}</div>
       ${(item.company||item.contact)?`<div class="meta"><strong>Заказчик:</strong> ${[item.company,item.contact].filter(Boolean).join(' — ')}</div>`:''}
       <div class="quick">
-        <button class="icbtn callBtn" title="Позвонить">${svgPhone}</button>
-        <a class="icbtn" href="${makeMapUrl(fullAddr)}" title="Маршрут" target="_blank" rel="noopener">${svgMap}</a>
+        <button class="icbtn callBtn" title="Позвонить">📞</button>
+        <a class="icbtn mapBtn" href="${makeMapUrl(fullAddr)}" target="_blank" rel="noopener" title="Маршрут">🗺️</a>
       </div>
     </div>
     <div class="menu">
@@ -96,6 +134,39 @@ function cardHTML(item,i,dateISO){
   </div>`
 }
 
+function renderDay(withSwipeAnim=false,dir='left'){
+  const list=$("#ordersList"), empty=$("#emptyDay"); const all=orders[currentDate]||[];
+  const filtered=all.filter(o=> currentFilter==='all'? true : (currentFilter==='active'? o.status!=='done' : o.status==='done'));
+  list.innerHTML=filtered.map((it,i)=>cardHTML(it, all.indexOf(it), currentDate)).join(''); empty.style.display=filtered.length?'none':'block';
+
+  $$("#ordersList .card").forEach(card=>{
+    const panel=$(".expand",card); let open=false;
+    card.addEventListener('click',(e)=>{
+      const withinAction = e.target.closest('.kebab,.menu,.editBtn,.delBtn,.markDoneBtn,.markActiveBtn,.callBtn,.mapBtn');
+      if(withinAction) return;
+      if(!open){panel.style.display='block';panel.style.height='auto';const end=panel.scrollHeight;panel.style.height='0px';panel.style.opacity='0';panel.style.transform='translateY(-4px)';requestAnimationFrame(()=>{card.classList.add('expanded');panel.style.height=end+'px';panel.style.opacity='1';panel.style.transform='translateY(0)'});panel.addEventListener('transitionend',function onEnd(e){if(e.propertyName==='height'){panel.style.height='auto';panel.removeEventListener('transitionend',onEnd)}})}
+      else{const start=panel.scrollHeight;panel.style.height=start+'px';requestAnimationFrame(()=>{panel.style.height='0px';panel.style.opacity='0';panel.style.transform='translateY(-4px)'});panel.addEventListener('transitionend',function onEnd(e){if(e.propertyName==='height'){card.classList.remove('expanded');panel.style.display='';panel.removeEventListener('transitionend',onEnd)}})}
+      open=!open;
+    });
+
+    const kebab=$(".kebab",card), menu=$(".menu",card);
+    kebab.addEventListener('click',(e)=>{ e.stopPropagation(); const show=menu.style.display!=='block'; $$("#ordersList .menu").forEach(m=>m.style.display='none'); menu.style.display=show?'block':'none' });
+
+    const idx=parseInt(card.dataset.index,10), date=card.dataset.date;
+    $(".editBtn",card).addEventListener('click',(e)=>{ e.stopPropagation(); openEditFor(date, idx) });
+    $(".delBtn",card).addEventListener('click',(e)=>{ e.stopPropagation(); deleteOrder(date, idx) });
+    $(".markDoneBtn",card)?.addEventListener('click',(e)=>{ e.stopPropagation(); setStatus(date, idx, 'done') });
+    $(".markActiveBtn",card)?.addEventListener('click',(e)=>{ e.stopPropagation(); setStatus(date, idx, 'active') });
+    $(".callBtn",card)?.addEventListener('click',(e)=>{ e.stopPropagation(); const o=(orders[date]||[])[idx]; if(o) openCall(o.phone) });
+  });
+
+  if(withSwipeAnim){ list.animate([{transform:`translateX(${dir==='left'?'40px':'-40px'})`,opacity:.0},{transform:'translateX(0)',opacity:1}],{duration:180,easing:'ease-out'}) }
+
+  // live refresh stats if profile is open
+  refreshProfileIfOpen();
+}
+
+/* REQUESTS */
 function requestCardHTML(r){
   const addr=buildFullAddress(r); const dm=fmtDM(r.date);
   return `<div class="card" data-id="${r.id}">
@@ -108,8 +179,8 @@ function requestCardHTML(r){
       <div class="meta">Время: ${r.time||'--:--'}</div>
       <div class="meta">Тип: ${r.type} · Шлагбаум: ${(r.gate||'нет')==='да'?'Да':'Нет'} · Лифт: ${(r.elevator||'нет')==='да'?'Да':'Нет'}</div>
       <div class="quick">
-        <button class="icbtn callBtn" title="Позвонить">${svgPhone}</button>
-        <a class="icbtn" href="${makeMapUrl(addr)}" title="Маршрут" target="_blank" rel="noopener">${svgMap}</a>
+        <button class="icbtn callBtn" title="Позвонить">📞</button>
+        <a class="icbtn" href="${makeMapUrl(addr)}" title="Маршрут" target="_blank" rel="noopener">🗺️</a>
       </div>
     </div>
     <div class="actions" style="margin-top:10px">
@@ -118,29 +189,6 @@ function requestCardHTML(r){
     </div>
   </div>`
 }
-
-function renderDay(withSwipeAnim=false,dir='left'){
-  const list=$("#ordersList"), empty=$("#emptyDay"); const all=orders[currentDate]||[];
-  list.innerHTML=all.map((it,i)=>cardHTML(it,i,currentDate)).join(''); empty.style.display=all.length?'none':'block';
-  $$("#ordersList .card").forEach(card=>{
-    const panel=$(".expand",card); let open=false;
-    card.addEventListener('click',(e)=>{
-      if(e.target.closest('.kebab')||e.target.closest('.menu')||e.target.closest('.editBtn')||e.target.closest('.delBtn')||e.target.closest('.markDoneBtn')||e.target.closest('.markActiveBtn')||e.target.closest('.callBtn')) return;
-      if(!open){panel.style.display='block';panel.style.height='auto';const end=panel.scrollHeight;panel.style.height='0px';panel.style.opacity='0';panel.style.transform='translateY(-4px)';requestAnimationFrame(()=>{card.classList.add('expanded');panel.style.height=end+'px';panel.style.opacity='1';panel.style.transform='translateY(0)'});panel.addEventListener('transitionend',function onEnd(e){if(e.propertyName==='height'){panel.style.height='auto';panel.removeEventListener('transitionend',onEnd)}})}
-      else{const start=panel.scrollHeight;panel.style.height=start+'px';requestAnimationFrame(()=>{panel.style.height='0px';panel.style.opacity='0';panel.style.transform='translateY(-4px)'});panel.addEventListener('transitionend',function onEnd(e){if(e.propertyName==='height'){card.classList.remove('expanded');panel.style.display='';panel.removeEventListener('transitionend',onEnd)}})}
-      open=!open;
-    });
-    const kebab=$(".kebab",card), menu=$(".menu",card);
-    kebab.addEventListener('click',(e)=>{e.stopPropagation();const show=menu.style.display!=='block'; $$("#ordersList .menu").forEach(m=>m.style.display='none'); menu.style.display=show?'block':'none'});
-    $(".editBtn",card).addEventListener('click',(e)=>e.stopPropagation());
-    $(".delBtn",card).addEventListener('click',(e)=>e.stopPropagation());
-    $(".markDoneBtn",card)?.addEventListener('click',(e)=>e.stopPropagation());
-    $(".markActiveBtn",card)?.addEventListener('click',(e)=>e.stopPropagation());
-    $(".callBtn",card)?.addEventListener('click',(e)=>{e.stopPropagation(); const idx=parseInt(card.dataset.index,10); const o=(orders[currentDate]||[])[idx]; if(o) openCall(o.phone) });
-  });
-  if(withSwipeAnim){ list.animate([{transform:`translateX(${dir==='left'?'40px':'-40px'})`,opacity:.0},{transform:'translateX(0)',opacity:1}],{duration:180,easing:'ease-out'}) }
-}
-
 function renderRequests(){
   const list=$("#requestsList"), empty=$("#emptyReq");
   if(!requests.length){ empty.style.display='block'; list.innerHTML=''; return }
@@ -148,13 +196,13 @@ function renderRequests(){
   $$("#requestsList .card").forEach(card=>{
     const id=card.dataset.id; const panel=$(".expand",card); let open=false;
     card.addEventListener('click',(e)=>{
-      if(e.target.closest('.actions')||e.target.closest('.callBtn')) return;
+      if(e.target.closest('.actions,.callBtn')) return;
       if(!open){panel.style.display='block';panel.style.height='auto';const end=panel.scrollHeight;panel.style.height='0px';panel.style.opacity='0';panel.style.transform='translateY(-4px)';requestAnimationFrame(()=>{card.classList.add('expanded');panel.style.height=end+'px';panel.style.opacity='1';panel.style.transform='translateY(0)'});panel.addEventListener('transitionend',function onEnd(e){if(e.propertyName==='height'){panel.style.height='auto';panel.removeEventListener('transitionend',onEnd)}})}
       else{const start=panel.scrollHeight;panel.style.height=start+'px';requestAnimationFrame(()=>{panel.style.height='0px';panel.style.opacity='0';panel.style.transform='translateY(-4px)'});panel.addEventListener('transitionend',function onEnd(e){if(e.propertyName==='height'){card.classList.remove('expanded');panel.style.display='';panel.removeEventListener('transitionend',onEnd)}})}
       open=!open;
     });
-    $(".acceptBtn",card).addEventListener('click',()=>acceptRequest(id));
-    $(".declineBtn",card).addEventListener('click',()=>declineRequest(id));
+    $(".acceptBtn",card).addEventListener('click',()=>{acceptRequest(id)});
+    $(".declineBtn",card).addEventListener('click',()=>{declineRequest(id)});
     $(".callBtn",card).addEventListener('click',()=>{const r=requests.find(x=>x.id===id); if(r) openCall(r.phone)});
   });
 }
@@ -166,16 +214,42 @@ function acceptRequest(id){
 }
 function declineRequest(id){ const idx=requests.findIndex(r=>r.id===id); if(idx<0) return; requests.splice(idx,1); persistAll(); renderRequests(); showToast('Заявка отклонена') }
 
-$("#addOrderBtn").addEventListener('click',()=>{ $("#f_date").value=currentDate; $("#f_gate").value='нет'; $("#f_elevator").value='нет'; openModal('orderModal') });
-
+/* EDIT / DELETE / STATUS */
 function openModal(id){ $("#"+id).classList.add('open') } function closeModal(id){ $("#"+id).classList.remove('open') }
 $$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.getAttribute('data-close'))));
 
+$("#addOrderBtn").addEventListener('click',()=>{ $("#f_date").value=currentDate; $("#f_gate").value='нет'; $("#f_elevator").value='нет'; openModal('orderModal') });
 $("#saveOrder").addEventListener('click',()=>{
   const data={name:$("#f_name").value||'Без имени',phone:$("#f_phone").value||'',street:$("#f_street").value||'',house:$("#f_house").value||'',apt:$("#f_apt").value||'',price:parseInt($("#f_price").value||'0',10),time:$("#f_time").value||'',type:$("#f_type").value,gate:$("#f_gate").value||'нет',elevator:$("#f_elevator").value||'нет',company:$("#f_company").value||'',contact:$("#f_contact").value||'',customer_note:$("#f_customer_note").value||'',comment:$("#f_comment").value||'',status:'active'};
   const date=$("#f_date").value||currentDate; if(!orders[date]) orders[date]=[]; orders[date].push(data); persistAll(); closeModal('orderModal'); currentDate=date; renderDateChips(); renderDay(); showToast('Заказ добавлен · '+fmt(date));
 });
+function openEditFor(date,index){
+  const o=(orders[date]||[])[index]; if(!o) return;
+  window._editing={date,index};
+  $("#e_name").value=o.name||''; $("#e_phone").value=o.phone||'';
+  $("#e_street").value=o.street||''; $("#e_house").value=o.house||''; $("#e_apt").value=o.apt||'';
+  $("#e_price").value=o.price||0; $("#e_time").value=o.time||''; $("#e_type").value=o.type||'мебель';
+  $("#e_gate").value=o.gate||'нет'; $("#e_elevator").value=o.elevator||'нет';
+  $("#e_company").value=o.company||''; $("#e_contact").value=o.contact||''; $("#e_customer_note").value=o.customer_note||'';
+  $("#e_comment").value=o.comment||''; $("#e_date").value=date;
+  openModal('editModal');
+}
+$("#updateOrder").addEventListener('click',()=>{
+  const ed=window._editing; if(!ed) return; const {date,index}=ed; const o=(orders[date]||[])[index]; if(!o) return;
+  const newDate=$("#e_date").value||date;
+  const data={name:$("#e_name").value,phone:$("#e_phone").value,street:$("#e_street").value||'',house:$("#e_house").value||'',apt:$("#e_apt").value||'',price:parseInt($("#e_price").value||'0',10),time:$("#e_time").value||'',type:$("#e_type").value,gate:$("#e_gate").value||'нет',elevator:$("#e_elevator").value||'нет',company:$("#e_company").value||'',contact:$("#e_contact").value||'',customer_note:$("#e_customer_note").value||'',comment:$("#e_comment").value||'',status:o.status||'active'};
+  orders[date].splice(index,1); if(!orders[newDate]) orders[newDate]=[]; orders[newDate].push(data); persistAll();
+  closeModal('editModal'); currentDate=newDate; renderDateChips(); renderDay(); showToast('Заказ обновлён');
+});
+$("#deleteOrder").addEventListener('click',()=>{
+  const ed=window._editing; if(!ed) return; const {date,index}=ed;
+  orders[date].splice(index,1); persistAll(); closeModal('editModal'); renderDateChips(); renderDay(); showToast('Заказ удалён');
+});
+function setStatus(date,index,status){
+  const o=(orders[date]||[])[index]; if(!o) return; o.status=status; persistAll(); renderDay(); showToast(status==='done'?'Отмечено выполнено':'Вернули в активные');
+}
 
+/* VIEWS */
 const views={home:$("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
 function showView(key){
   Object.values(views).forEach(v=>v.classList.remove('active')); views[key].classList.add('active');
@@ -185,37 +259,90 @@ function showView(key){
   $("#dateStrip").style.display = key==='home' ? '' : 'none';
   if(key==='home'){ renderDateChips(); renderDay() }
   if(key==='requests'){ renderRequests() }
+  if(key==='profile'){ attachProfileFilters(); renderProfileStats(); }
+  if(key==='settings'){ syncSettingsUI(); }
   if(key==='calendar'){ initCalendarFromCurrent(); renderCalendar() }
 }
-$$(".navbtn.circ").forEach((btn,idx)=>{ btn.addEventListener('click',()=>{ const map={0:'home',1:'requests'}; if(map[idx]) showView(map[idx]) }) });
-$("#profileBtn").addEventListener('click',()=>{ showView('profile') });
-$("#settingsBtn").addEventListener('click',()=>{ showView('settings') });
-$("#calendarBtn").addEventListener('click',()=>{ showView('calendar') });
 
+/* FILTERS */
+function attachProfileFilters(){
+  $$("#filterBar .fchip").forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      $$("#filterBar .fchip").forEach(b=>{ b.classList.toggle('active', b===btn); b.setAttribute('aria-selected', b===btn ? 'true':'false'); });
+      currentFilter = btn.dataset.filter;
+      renderDay();
+      showToast('Фильтр: ' + (currentFilter==='all'?'Все': currentFilter==='active'?'Активные':'Выполненные'));
+      refreshProfileIfOpen();
+    }, {passive:true});
+  });
+}
+
+/* STATS */
+function safeNum(v){ const n=parseInt(v,10); return isNaN(n)?0:n }
+function renderProfileStats(){
+  try{
+    const container=$("#profileStats"), monthly=$("#monthlyStats");
+    if(!container || !monthly) return;
+    const entries = Object.entries(orders||{});
+    const all = entries.flatMap(([date,arr])=> Array.isArray(arr) ? arr.map(o=>({date,...o})) : []);
+    const total = all.length;
+    const done = all.filter(o=>o.status==='done').length;
+    const active = total - done;
+    const revenue = all.filter(o=>o.status==='done').reduce((s,o)=> s + safeNum(o.price||0), 0);
+
+    container.innerHTML = `
+      <div class="cardlike"><div class="meta">Всего заказов</div><div class="price">${total}</div></div>
+      <div class="cardlike"><div class="meta">Выполнено</div><div class="price">${done}</div></div>
+      <div class="cardlike"><div class="meta">Активные</div><div class="price">${active}</div></div>
+      <div class="cardlike"><div class="meta">Заработано ₽</div><div class="price">${revenue}</div></div>`;
+
+    const agg = {};
+    all.forEach(o=>{
+      const ym = (o.date||'').slice(0,7);
+      if(!ym) return;
+      if(!agg[ym]) agg[ym] = {count:0,done:0,revenue:0};
+      agg[ym].count += 1;
+      if(o.status==='done'){ agg[ym].done += 1; agg[ym].revenue += safeNum(o.price||0); }
+    });
+    const rows = Object.entries(agg).sort((a,b)=> a[0]>b[0]?-1:1).map(([ym,v])=>{
+      const m = new Date(`${ym}-01`).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+      return `<div class="row"><span style="text-transform:capitalize">${m}</span><span>${v.count} / выполнено ${v.done} • ₽${v.revenue}</span></div>`;
+    }).join('');
+    monthly.innerHTML = rows || '<div class="meta">Нет данных</div>';
+  }catch(e){
+    console.error('Stats render error', e);
+  }
+}
+function refreshProfileIfOpen(){ if(views.profile.classList.contains('active')) renderProfileStats() }
+
+/* CALENDAR */
 let calYear,calMonth;
 function initCalendarFromCurrent(){ const d=new Date(currentDate); calYear=d.getFullYear(); calMonth=d.getMonth() }
 function monthDaysGrid(y,m){
-  const first=new Date(y,m,1); const startDay=(first.getDay()+6)%7; const daysInMonth=new Date(y,m+1,0).getDate(); const cells=[];
-  for(let i=0;i<startDay;i++) cells.push({muted:true});
-  for(let d=1; d<=daysInMonth; d++){ const iso=new Date(y,m,d).toISOString().slice(0,10); const hasActive=(orders[iso]||[]).some(o=>o.status!=='done'); const hasAny=(orders[iso]||[]).length>0;
-    cells.push({muted:false,d,iso,dot: hasActive?'active':(hasAny?'none':'empty')});
-  }
+  const first=new Date(y,m,1); const start=(first.getDay()+6)%7; const days=new Date(y,m+1,0).getDate(); const cells=[];
+  for(let i=0;i<start;i++) cells.push({muted:true});
+  for(let d=1; d<=days; d++){ const iso=new Date(y,m,d).toISOString().slice(0,10); const hasActive=(orders[iso]||[]).some(o=>o.status!=='done'); const hasAny=(orders[iso]||[]).length>0; cells.push({muted:false,d,iso,dot:hasActive?'active':(hasAny?'none':'empty')}); }
   while(cells.length%7!==0) cells.push({muted:true}); return cells;
 }
 function renderCalendar(){
   $("#calTitle").textContent=monthTitle(calYear,calMonth);
   const grid=$("#calGrid"); const cells=monthDaysGrid(calYear,calMonth);
-  grid.innerHTML=cells.map(c=> c.muted?`<div class="day muted"><div class="dnum"></div></div>`:
-    `<div class="day" data-iso="${c.iso}"><div class="dnum">${String(c.d)}</div><div class="${c.dot==='active'?'dotmini active':'dotmini'}"></div></div>`
-  ).join('');
+  grid.innerHTML=cells.map(c=> c.muted?`<div class="day muted"><div class="dnum"></div></div>`:`<div class="day" data-iso="${c.iso}"><div class="dnum">${String(c.d)}</div><div class="${c.dot==='active'?'dotmini active':'dotmini'}"></div></div>`).join('');
   $$("#calGrid .day").forEach(el=>{ if(!el.dataset.iso) return; el.addEventListener('click',()=>{ currentDate=el.dataset.iso; showView('home'); showToast('День выбран: '+fmt(currentDate)) }) });
 }
-$("#calPrev").addEventListener('click',()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--} renderCalendar() });
-$("#calNext").addEventListener('click',()=>{ calMonth++; if(calMonth>11){calMonth=0;calYear++} renderCalendar() });
-$("#backToHome").addEventListener('click',()=>showView('home'));
 
-function showToast(msg){const t=$("#toast"); t.querySelector('span').textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600)}
+/* NAV */
+$$(".navbtn.circ").forEach((btn,idx)=>{ btn.addEventListener('click',()=>{ const map={0:'home',1:'requests'}; if(map[idx]) showView(map[idx]) }) });
+$("#profileBtn").addEventListener('click',()=>{ showView('profile') });
+$("#settingsBtn").addEventListener('click',()=>{ showView('settings') });
+$("#calendarBtn").addEventListener('click',()=>{ showView('calendar') });
 
+/* TOAST */
+let toastTimer=null;
+function showToast(msg){ const t=$("#toast"); t.querySelector('span').textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1600) }
+
+/* INIT */
+const views={home:$("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
 document.addEventListener('keydown',e=>{ if(!views.home.classList.contains('active')) return; if(e.key==='ArrowLeft'){currentDate=addDaysISO(currentDate,-1);renderDateChips();renderDay(true,'right')} if(e.key==='ArrowRight'){currentDate=addDaysISO(currentDate,1);renderDateChips();renderDay(true,'left')} });
 
 renderDateChips(); renderDay();
