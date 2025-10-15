@@ -1,4 +1,4 @@
-// MOVI V1.3.3 — Profile stats always render & auto-refresh + keep 1.3.2 fixes
+// MOVI V1.3.5 — Stable full build with 1.3.4 fixes merged
 const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const fmt=(d)=>new Date(d).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
 const fmtDM=(d)=>new Date(d).toLocaleDateString('ru-RU',{day:'2-digit',month:'long'});
@@ -6,8 +6,11 @@ const monthTitle=(y,m)=>new Date(y,m,1).toLocaleDateString('ru-RU',{month:'long'
 const todayISO=()=>new Date().toISOString().slice(0,10);
 const addDaysISO=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
 
-const TMA = (typeof window !== 'undefined' && window.Telegram && Telegram.WebApp) ? Telegram.WebApp : null;
-if (TMA) { try { TMA.ready(); } catch(e){} }
+// Telegram helpers
+const TMA=(typeof window!=='undefined' && window.Telegram && Telegram.WebApp)?Telegram.WebApp:null; if(TMA){try{TMA.ready()}catch(e){}}
+
+// ---- DOM refs (declare ONCE) ----
+const views={home:$("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
 
 let currentDate=todayISO(); let currentFilter='all';
 function saveLS(k,v){localStorage.setItem(k,JSON.stringify(v))}
@@ -35,8 +38,7 @@ function persistAll(){saveLS('movi_orders',orders);saveLS('movi_requests',reques
 /* THEME */
 const prefersDark=window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
-  const mode=userSettings.theme||'auto';
-  let theme=mode;
+  const mode=userSettings.theme||'auto'; let theme=mode;
   if(mode==='auto'){ theme = prefersDark.matches ? 'dark' : 'light'; }
   document.documentElement.setAttribute('data-theme', theme);
 }
@@ -53,6 +55,25 @@ $("#themeSelect")?.addEventListener('change',e=>{ userSettings.theme=e.target.va
 $("#cityInput")?.addEventListener('input',e=>{ userSettings.city=e.target.value; saveLS('movi_settings',userSettings); renderDay(); renderRequests(); refreshProfileIfOpen(); });
 $("#callAppSelect")?.addEventListener('change',e=>{ userSettings.callApp=e.target.value; saveLS('movi_settings',userSettings); });
 $("#mapAppSelect")?.addEventListener('change',e=>{ userSettings.mapApp=e.target.value; saveLS('movi_settings',userSettings); });
+
+// Export / Import
+$("#exportBtn")?.addEventListener('click',()=>{
+  const data={orders,requests,userSettings,userProfile,version:'1.3.5'};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='movi-backup.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 0);
+});
+$("#importInput")?.addEventListener('change',(e)=>{
+  const file=e.target.files?.[0]; if(!file) return;
+  const reader=new FileReader(); reader.onload=()=>{
+    try{ const obj=JSON.parse(reader.result);
+      if(obj.orders) orders=obj.orders; if(obj.requests) requests=obj.requests;
+      if(obj.userSettings) userSettings=obj.userSettings; if(obj.userProfile) userProfile=obj.userProfile;
+      persistAll(); applyTheme(); renderDateChips(); renderDay(); showToast('Данные импортированы');
+    }catch(err){ showToast('Ошибка импорта'); }
+  }; reader.readAsText(file);
+});
 
 /* Date chips (home only) */
 const dateStrip=$("#dateStrip");
@@ -106,6 +127,28 @@ function openCall(phone){
 
 function makeMapUrl(a){const q=encodeURIComponent(a); if(userSettings.mapApp==='yandex') return `https://yandex.ru/maps/?text=${q}`; if(userSettings.mapApp==='2gis') return `https://2gis.ru/search/${q}`; return `https://www.google.com/maps/search/?api=1&query=${q}`}
 function buildFullAddress(o){ const city=userSettings.city?(userSettings.city+', '):''; const street=o.street||''; const house=o.house||''; const apt=o.apt?(', кв. '+o.apt):''; if(o.address&&!street) return o.address; return city+[street,house].filter(Boolean).join(' ')+apt }
+
+/* PHONE MASK (RU) */
+function formatPhoneRU(raw){
+  let d = (raw||'').replace(/\D/g,'');
+  if(d.startsWith('8')) d = '7' + d.slice(1);
+  if(!d.startsWith('7')) d = '7' + d;
+  d = d.slice(0,11);
+  const p = ['+7'];
+  if(d.length>1){ p.push(' (', d.slice(1,4)); if(d.length>=4)p.push(') '); }
+  if(d.length>=7){ p.push(d.slice(4,7), '-', d.slice(7,9)); if(d.length>=11)p.push('-', d.slice(9,11)); }
+  else if(d.length>4){ p.push(d.slice(4)); }
+  return p.join('');
+}
+['p_phone','f_phone','e_phone'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('input',()=>{
+    const pos = el.selectionStart;
+    el.value = formatPhoneRU(el.value);
+    el.setSelectionRange(el.value.length, el.value.length);
+  });
+});
 
 /* RENDER */
 function statusBadge(s){const cls=s==='done'?'done':'active'; const txt=s==='done'?'ВЫПОЛНЕНО':'АКТИВНО'; return `<span class="badge ${cls}">${txt}</span>`}
@@ -250,7 +293,6 @@ function setStatus(date,index,status){
 }
 
 /* VIEWS */
-const views={home:$("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
 function showView(key){
   Object.values(views).forEach(v=>v.classList.remove('active')); views[key].classList.add('active');
   $$(".navbtn.circ").forEach(b=>b.classList.remove('active')); if(key==='home') $$(".navbtn.circ")[0]?.classList.add('active'); if(key==='requests') $$(".navbtn.circ")[1]?.classList.add('active');
@@ -259,13 +301,28 @@ function showView(key){
   $("#dateStrip").style.display = key==='home' ? '' : 'none';
   if(key==='home'){ renderDateChips(); renderDay() }
   if(key==='requests'){ renderRequests() }
-  if(key==='profile'){ attachProfileFilters(); renderProfileStats(); }
+  if(key==='profile'){ attachProfileFilters(); renderProfileStats(); syncProfileUI(); }
   if(key==='settings'){ syncSettingsUI(); }
   if(key==='calendar'){ initCalendarFromCurrent(); renderCalendar() }
 }
+$$(".navbtn.circ").forEach((btn,idx)=>{ btn.addEventListener('click',()=>{ const map={0:'home',1:'requests'}; if(map[idx]) showView(map[idx]) }) });
+$("#profileBtn").addEventListener('click',()=>{ showView('profile') });
+$("#settingsBtn").addEventListener('click',()=>{ showView('settings') });
+$("#calendarBtn").addEventListener('click',()=>{ showView('calendar') });
+
+/* PROFILE SAVE */
+function syncProfileUI(){ $("#p_name").value=userProfile.name||''; $("#p_phone").value=userProfile.phone||''; }
+$("#saveProfileBtn").addEventListener('click',()=>{
+  userProfile.name=$("#p_name").value||'Исполнитель';
+  userProfile.phone=$("#p_phone").value||'+7 ';
+  saveLS('movi_profile',userProfile);
+  showToast('Профиль сохранён');
+});
 
 /* FILTERS */
+let filtersAttached=false;
 function attachProfileFilters(){
+  if(filtersAttached) return;
   $$("#filterBar .fchip").forEach(btn=>{
     btn.addEventListener('click',()=>{
       $$("#filterBar .fchip").forEach(b=>{ b.classList.toggle('active', b===btn); b.setAttribute('aria-selected', b===btn ? 'true':'false'); });
@@ -275,6 +332,7 @@ function attachProfileFilters(){
       refreshProfileIfOpen();
     }, {passive:true});
   });
+  filtersAttached=true;
 }
 
 /* STATS */
@@ -330,19 +388,18 @@ function renderCalendar(){
   grid.innerHTML=cells.map(c=> c.muted?`<div class="day muted"><div class="dnum"></div></div>`:`<div class="day" data-iso="${c.iso}"><div class="dnum">${String(c.d)}</div><div class="${c.dot==='active'?'dotmini active':'dotmini'}"></div></div>`).join('');
   $$("#calGrid .day").forEach(el=>{ if(!el.dataset.iso) return; el.addEventListener('click',()=>{ currentDate=el.dataset.iso; showView('home'); showToast('День выбран: '+fmt(currentDate)) }) });
 }
-
-/* NAV */
-$$(".navbtn.circ").forEach((btn,idx)=>{ btn.addEventListener('click',()=>{ const map={0:'home',1:'requests'}; if(map[idx]) showView(map[idx]) }) });
-$("#profileBtn").addEventListener('click',()=>{ showView('profile') });
-$("#settingsBtn").addEventListener('click',()=>{ showView('settings') });
-$("#calendarBtn").addEventListener('click',()=>{ showView('calendar') });
+$("#calPrev")?.addEventListener('click',()=>{ calMonth--; if(calMonth<0){calMonth=11; calYear--} renderCalendar() });
+$("#calNext")?.addEventListener('click',()=>{ calMonth++; if(calMonth>11){calMonth=0; calYear++} renderCalendar() });
+$("#backToHome")?.addEventListener('click',()=> showView('home'));
 
 /* TOAST */
 let toastTimer=null;
 function showToast(msg){ const t=$("#toast"); t.querySelector('span').textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1600) }
 
+// Safety: show JS errors as toast to avoid dead UI
+window.addEventListener('error',e=>{ console.error(e.error||e.message); const msg = (e && e.message)? e.message : 'Ошибка скрипта'; showToast(msg) });
+
 /* INIT */
-const views={home:$("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
 document.addEventListener('keydown',e=>{ if(!views.home.classList.contains('active')) return; if(e.key==='ArrowLeft'){currentDate=addDaysISO(currentDate,-1);renderDateChips();renderDay(true,'right')} if(e.key==='ArrowRight'){currentDate=addDaysISO(currentDate,1);renderDateChips();renderDay(true,'left')} });
 
 renderDateChips(); renderDay();
