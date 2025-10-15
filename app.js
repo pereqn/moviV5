@@ -1,4 +1,4 @@
-// MOVI v8 — full logic with requested changes
+// MOVI V1.1 — v9 + animated expand/collapse
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
 const fmt = (d)=> new Date(d).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -8,17 +8,17 @@ const addDaysISO = (iso, delta)=>{ const d=new Date(iso); d.setDate(d.getDate()+
 let currentDate = todayISO();
 let currentFilter = 'all'; // all | active | done
 
-/* ===== Persistent storage helpers ===== */
+/* ===== Persistent storage ===== */
 function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 function loadLS(key, fallback){ try{ const v = JSON.parse(localStorage.getItem(key) || 'null'); return v==null ? fallback : v; }catch(e){ return fallback; } }
 
-/* ===== User settings & profile ===== */
+/* ===== Settings & Profile ===== */
 let userSettings = loadLS('movi_settings', { theme:'auto', callApp:'phone', mapApp:'google', city:'' });
 let userProfile  = loadLS('movi_profile', { name:'Исполнитель', phone:'+7 ' });
 saveLS('movi_settings', userSettings);
 saveLS('movi_profile', userProfile);
 
-/* ===== Orders & Requests (persistent) ===== */
+/* ===== Data ===== */
 let orders = loadLS('movi_orders', null);
 let requests = loadLS('movi_requests', null);
 if(!orders || !Object.keys(orders).length){
@@ -74,7 +74,7 @@ function attachPhoneMask(el){
   el.addEventListener('blur', ()=>{ el.value = formatRUPhone(el.value); });
 }
 
-/* ===== Theme (auto/light/dark) ===== */
+/* ===== Theme ===== */
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 function applyThemeFromSettings(){
   const mode = userSettings.theme || 'auto';
@@ -85,7 +85,7 @@ function applyThemeFromSettings(){
 prefersDark.addEventListener('change', applyThemeFromSettings);
 applyThemeFromSettings();
 
-/* ===== Date strip only (no month strip) ===== */
+/* ===== Dates ===== */
 const dateStrip = $("#dateStrip");
 function chipStatus(iso){
   const day = orders[iso] || [];
@@ -130,14 +130,13 @@ document.addEventListener('touchend', onTouchEnd, {passive:true});
 document.addEventListener('mousedown', onTouchStart);
 document.addEventListener('mouseup', onTouchEnd);
 
-/* ===== Filters now live in Profile ===== */
+/* ===== Filters in Profile ===== */
 function attachProfileFilters(){
   $$("#filterBar .fchip").forEach(btn=>{
     btn.addEventListener('click', ()=>{
       $$("#filterBar .fchip").forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       currentFilter = btn.dataset.filter;
-      // Обновляем Home, чтобы эффект сразу виден
       renderDay();
       showToast('Фильтр: ' + (currentFilter==='all'?'Все': currentFilter==='active'?'Активные':'Выполненные'));
     });
@@ -150,7 +149,7 @@ function findConflicts(day){
   const slots = day.map((o,i)=>({i, t:parseHM(o.time)})).filter(x=>x.t!=null);
   const set = new Set();
   for(let a=0;a<slots.length;a++){
-    for(let b=a+1;b<b.length;b++){
+    for(let b=a+1;b<slots.length;b++){
       if(Math.abs(slots[a].t - slots[b].t) <= 60){ set.add(slots[a].i); set.add(slots[b].i); }
     }
   }
@@ -194,7 +193,7 @@ function makeMapUrl(address){
   return `https://www.google.com/maps/search/?api=1&query=${q}`;
 }
 
-/* ===== Cards (vertical layout) ===== */
+/* ===== Card HTML (collapsed main fields only) ===== */
 function cardHTML(item, i, dateISO, conflict=false){
   const fullAddr = buildFullAddress(item);
   return `<div class="card" data-index="${i}" data-date="${dateISO}">
@@ -209,10 +208,10 @@ function cardHTML(item, i, dateISO, conflict=false){
     <div class="line">Адрес: ${fullAddr}</div>
     <div class="line">Телефон: ${item.phone}</div>
     <div class="line">Цена: ₽ ${item.price}</div>
-    <div class="line">Тип/Время: ${item.type} · ${item.time || '--:--'}</div>
-    <div class="line">Шлагбаум: ${(item.gate||'нет')==='да' ? 'Да' : 'Нет'} · Лифт: ${(item.elevator||'нет')==='да' ? 'Да' : 'Нет'}</div>
 
     <div class="expand">
+      <div class="line">Тип/Время: ${item.type} · ${item.time || '--:--'}</div>
+      <div class="line">Шлагбаум: ${(item.gate||'нет')==='да' ? 'Да' : 'Нет'} · Лифт: ${(item.elevator||'нет')==='да' ? 'Да' : 'Нет'}</div>
       ${(item.company||item.contact||item.customer_note) ? `<div class="line"><strong>Заказчик:</strong> ${[item.company, item.contact].filter(Boolean).join(' — ')}</div>` : ''}
       ${item.customer_note ? `<div class="meta">Заметка: ${item.customer_note}</div>` : ''}
       <div class="meta">${item.comment || ''}</div>
@@ -232,6 +231,53 @@ function cardHTML(item, i, dateISO, conflict=false){
   </div>`;
 }
 
+/* ===== Expand/collapse with smooth height animation ===== */
+function toggleExpand(card){
+  const panel = $(".expand", card);
+  if(!panel) return;
+  const isOpen = card.classList.contains('expanded');
+  if(!isOpen){
+    // OPEN
+    panel.style.paddingTop = '8px';
+    panel.style.display = 'block';            // ensure measurable
+    panel.style.height = 'auto';
+    const end = panel.scrollHeight;
+    panel.style.height = '0px';               // reset to start
+    panel.style.opacity = '0';
+    panel.style.transform = 'translateY(-4px)';
+    requestAnimationFrame(()=>{
+      card.classList.add('expanded');
+      panel.style.height = end + 'px';
+      panel.style.opacity = '1';
+      panel.style.transform = 'translateY(0)';
+    });
+    panel.addEventListener('transitionend', function onEnd(e){
+      if(e.propertyName === 'height'){
+        panel.style.height = 'auto';          // lock to content after animation
+        panel.removeEventListener('transitionend', onEnd);
+      }
+    });
+  }else{
+    // CLOSE
+    const start = panel.scrollHeight;
+    panel.style.height = start + 'px';
+    panel.style.opacity = '1';
+    panel.style.transform = 'translateY(0)';
+    requestAnimationFrame(()=>{
+      panel.style.height = '0px';
+      panel.style.opacity = '0';
+      panel.style.transform = 'translateY(-4px)';
+      panel.style.paddingTop = '0px';
+    });
+    panel.addEventListener('transitionend', function onEnd(e){
+      if(e.propertyName === 'height'){
+        card.classList.remove('expanded');
+        panel.removeEventListener('transitionend', onEnd);
+      }
+    });
+  }
+}
+
 function renderDay(withSwipeAnim=false, dir='left'){
   const list = $("#ordersList");
   const empty = $("#emptyDay");
@@ -248,7 +294,7 @@ function renderDay(withSwipeAnim=false, dir='left'){
   $$("#ordersList .card").forEach(card=>{
     card.addEventListener('click', (e)=>{
       if(e.target.closest('.kebab') || e.target.closest('.menu') || e.target.closest('.editBtn') || e.target.closest('.delBtn') || e.target.closest('.markDoneBtn') || e.target.closest('.markActiveBtn') || e.target.closest('.markDoneIcon') || e.target.closest('.callBtn')) return;
-      card.classList.toggle('expanded');
+      toggleExpand(card);
     });
     const kebab = $(".kebab", card);
     const menu = $(".menu", card);
@@ -310,7 +356,7 @@ function renderRequests(){
     </div>`;
   }).join('');
   $$("#requestsList .card").forEach(card=>{
-    card.addEventListener('click',(e)=>{ if(e.target.closest('.actions')) return; card.classList.toggle('expanded'); });
+    card.addEventListener('click',(e)=>{ if(e.target.closest('.actions')) return; toggleExpand(card); });
     $(".acceptBtn",card).addEventListener('click',()=> acceptRequest(card.dataset.id));
     $(".declineBtn",card).addEventListener('click',()=> declineRequest(card.dataset.id));
     $(".callBtn",card).addEventListener('click',()=>{
@@ -444,26 +490,22 @@ $("#deleteOrder").addEventListener('click', ()=>{
   showToast('Заказ удалён');
 });
 
-/* ===== Views switching (top active state + bottom nav 3 centered) ===== */
+/* ===== Views & dock ===== */
 const views = { home: $("#view-home"), requests: $("#view-requests"), settings: $("#view-settings"), profile: $("#view-profile") };
 function showView(key){
   Object.values(views).forEach(v=>v.classList.remove('active'));
   views[key].classList.add('active');
-  // Bottom nav active
-  $$(".navbtn").forEach(b=>b.classList.remove('active'));
-  const mapping = {home:0, requests:1};
-  if(mapping[key]!=null) $$(".navbtn")[mapping[key]].classList.add('active');
-  // Top icons active state
+  $$(".navbtn.circ").forEach(b=>b.classList.remove('active'));
+  if(key==='home') $$(".navbtn.circ")[0]?.classList.add('active');
+  if(key==='requests') $$(".navbtn.circ")[1]?.classList.add('active');
   $$(".iconbtn[data-top]").forEach(b=>b.classList.remove('active'));
   if(key==='profile') $("#profileBtn").classList.add('active');
   if(key==='settings') $("#settingsBtn").classList.add('active');
-  // Title
   const title = {home:'Главный экран', requests:'Заявки', settings:'Настройки', profile:'Профиль'}[key] || 'MOVI';
   $("#pageTitle").textContent = title;
 }
-$$(".navbtn").forEach((btn,idx)=>{
+$$(".navbtn.circ").forEach((btn,idx)=>{
   btn.addEventListener('click', ()=>{
-    if(btn.id==='addOrderBtn'){ openModal('orderModal'); return; }
     const map = {0:'home',1:'requests'};
     if(map[idx]){
       showView(map[idx]);
@@ -472,10 +514,11 @@ $$(".navbtn").forEach((btn,idx)=>{
     }
   });
 });
+$("#addOrderBtn").addEventListener('click', ()=>{ openModal('orderModal'); });
 $("#profileBtn").addEventListener('click', ()=>{ showView('profile'); renderProfileStats(); syncProfileUI(); attachProfileFilters(); });
 $("#settingsBtn").addEventListener('click', ()=>{ showView('settings'); syncSettingsUI(); });
 
-/* ===== Settings UI sync ===== */
+/* ===== Settings sync ===== */
 function syncSettingsUI(){
   $("#themeSelect").value = userSettings.theme || 'auto';
   $("#cityInput").value = userSettings.city || '';
@@ -489,7 +532,7 @@ $("#cityInput")?.addEventListener('input', (e)=>{ userSettings.city = e.target.v
 $("#callAppSelect")?.addEventListener('change', (e)=>{ userSettings.callApp = e.target.value; saveLS('movi_settings', userSettings); });
 $("#mapAppSelect")?.addEventListener('change', (e)=>{ userSettings.mapApp = e.target.value; saveLS('movi_settings', userSettings); });
 
-/* ===== Profile UI & stats ===== */
+/* ===== Profile & stats ===== */
 function syncProfileUI(){
   $("#p_name").value = userProfile.name || '';
   $("#p_phone").value = userProfile.phone || '';
@@ -539,7 +582,7 @@ function showToast(msg){
   clearTimeout(toastTimer); toastTimer = setTimeout(()=> t.classList.remove('show'), 1600);
 }
 
-/* ===== Global key arrows for day nav ===== */
+/* ===== Arrows (desktop) ===== */
 document.addEventListener('keydown', (e)=>{
   if(e.key==='ArrowLeft'){ currentDate = addDaysISO(currentDate,-1); renderDateChips(); renderDay(true,'right'); }
   if(e.key==='ArrowRight'){ currentDate = addDaysISO(currentDate,1); renderDateChips(); renderDay(true,'left'); }
