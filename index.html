@@ -33,21 +33,25 @@
         </div>
       </div>
 
+      <!-- Month strip removed by request -->
       <div class="datestrip" id="dateStrip" aria-label="Дни (свайп)"></div>
     </header>
 
     <main class="content">
+      <!-- Home/day view (no stats, no filters here) -->
       <section class="view active" id="view-home">
         <div class="list" id="ordersList"></div>
         <div class="empty" id="emptyDay" style="display:none">На выбранную дату заказов пока нет.</div>
       </section>
 
+      <!-- Requests -->
       <section class="view" id="view-requests">
         <div class="hint">Заявки от клиентов. Нажмите, чтобы раскрыть и принять/отклонить.</div>
         <div class="list" id="requestsList"></div>
         <div class="empty" id="emptyReq" style="display:none">Заявок пока нет.</div>
       </section>
 
+      <!-- Settings (top-right icon only) -->
       <section class="view" id="view-settings">
         <div class="settings">
           <div class="setting-row">
@@ -96,6 +100,7 @@
         </div>
       </section>
 
+      <!-- Profile (filters moved here) -->
       <section class="view" id="view-profile">
         <div class="profile">
           <h3>Профиль</h3>
@@ -123,21 +128,22 @@
       </section>
     </main>
 
+    <!-- Bottom nav: 3 centered, 20% smaller -->
     <nav class="nav">
-      <div class="navwrap">
+      <div class="navwrap nav3">
         <button class="navbtn active" data-nav="home" title="Главная (по дням)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
         <button class="navbtn" data-nav="requests" title="Заявки">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M3 12l3-7h12l3 7v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7z" stroke="currentColor" stroke-width="2"/>
             <path d="M7 12h3a2 2 0 0 0 4 0h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
         <button class="navbtn" id="addOrderBtn" title="Добавить заказ">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
@@ -145,7 +151,7 @@
     </nav>
   </div>
 
-  <!-- Modals (same as previous message) -->
+  <!-- Modals -->
   <div class="modal" id="calendarModal" aria-hidden="true">
     <div class="sheet">
       <h3>Выбор даты</h3>
@@ -258,7 +264,6 @@
 
   <div class="toast" id="toast"><span></span></div>
 
-  <script src="styles.js" defer></script>
   <script src="app.js"></script>
 </body>
 </html>
