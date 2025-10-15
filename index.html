@@ -1,16 +1,277 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MOVI Prototype v6</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MOVI — v7</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main>
-    <h1>MOVI prototype v6</h1>
-    <p>Архив собран успешно. Здесь будет вся логика сайта.</p>
-  </main>
+  <div class="app">
+    <header>
+      <div class="topbar">
+        <button class="iconbtn sm" id="profileBtn" title="Профиль" aria-label="Открыть профиль">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"></circle>
+            <path d="M5 20a7 7 0 0 1 14 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+          </svg>
+        </button>
+        <div class="title" id="pageTitle">Главный экран</div>
+        <div class="righticons">
+          <button class="iconbtn sm" id="settingsBtn" title="Настройки" aria-label="Открыть настройки">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2"/>
+              <path d="M19.4 15a7.97 7.97 0 0 0 .1-1 7.97 7.97 0 0 0-.1-1l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1l-.4-2.7h-4l-.4-2.7a8 8 0 0 0-1.7-1l-2.5-1-2 3.4L4.6 13a7.97 7.97 0 0 0-.1 1 7.97 7.97 0 0 0 .1 1l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="iconbtn" id="calendarBtn" title="Календарь" aria-label="Открыть календарь">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6"></rect>
+              <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" stroke-width="1.6"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="monthstrip" id="monthStrip" aria-label="Месяцы (свайп)"></div>
+      <div class="datestrip" id="dateStrip" aria-label="Дни (свайп)"></div>
+
+      <div class="filterbar" id="filterBar" role="tablist" aria-label="Фильтр статуса">
+        <button class="fchip active" data-filter="all" role="tab" aria-selected="true">Все</button>
+        <button class="fchip" data-filter="active" role="tab" aria-selected="false">Активные</button>
+        <button class="fchip" data-filter="done" role="tab" aria-selected="false">Выполненные</button>
+      </div>
+
+      <div class="wkstats" id="weekStats"></div>
+      <div class="dmstats" id="dayMonthStats"></div>
+    </header>
+
+    <main class="content">
+      <!-- Home/day view -->
+      <section class="view active" id="view-home">
+        <div class="list" id="ordersList"></div>
+        <div class="empty" id="emptyDay" style="display:none">На выбранную дату заказов пока нет.</div>
+      </section>
+
+      <!-- Requests -->
+      <section class="view" id="view-requests">
+        <div class="hint">Заявки от клиентов. Нажмите, чтобы раскрыть и принять/отклонить.</div>
+        <div class="list" id="requestsList"></div>
+        <div class="empty" id="emptyReq" style="display:none">Заявок пока нет.</div>
+      </section>
+
+      <!-- Settings -->
+      <section class="view" id="view-settings">
+        <div class="settings">
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Тема</div>
+              <div class="setting-desc">Светлая / Тёмная / Авто (система)</div>
+            </div>
+            <select id="themeSelect">
+              <option value="auto">Авто</option>
+              <option value="light">Светлая</option>
+              <option value="dark">Тёмная</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Город по умолчанию</div>
+              <div class="setting-desc">Используется в адресе заказов</div>
+            </div>
+            <input id="cityInput" placeholder="Например: Москва">
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Приложение для звонков</div>
+              <div class="setting-desc">Что открывать при нажатии на телефон</div>
+            </div>
+            <select id="callAppSelect">
+              <option value="phone">Телефон</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="telegram">Telegram</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Приложение для карт</div>
+              <div class="setting-desc">Что открывать при нажатии на адрес</div>
+            </div>
+            <select id="mapAppSelect">
+              <option value="google">Google Maps</option>
+              <option value="yandex">Yandex Maps</option>
+              <option value="2gis">2GIS</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Profile -->
+      <section class="view" id="view-profile">
+        <div class="profile">
+          <h3>Профиль</h3>
+          <div class="grid">
+            <input id="p_name" placeholder="Имя исполнителя">
+            <input id="p_phone" placeholder="Телефон исполнителя">
+          </div>
+          <div class="actions" style="margin-top:8px">
+            <button class="btn primary" id="saveProfileBtn">Сохранить профиль</button>
+          </div>
+
+          <h4 style="margin-top:18px">Статистика</h4>
+          <div class="statgrid" id="profileStats"></div>
+
+          <h4 style="margin-top:18px">По месяцам</h4>
+          <div class="monthstats" id="monthlyStats"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="nav">
+      <div class="navwrap">
+        <button class="navbtn active" data-nav="home" title="Главная (по дням)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="navbtn" data-nav="requests" title="Заявки">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 12l3-7h12l3 7v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7z" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 12h3a2 2 0 0 0 4 0h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="navbtn" data-nav="settings" title="Настройки">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2"/>
+            <path d="M19.4 15a7.97 7.97 0 0 0 .1-1 7.97 7.97 0 0 0-.1-1l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1l-.4-2.7h-4l-.4-2.7a8 8 0 0 0-1.7-1l-2.5-1-2 3.4L4.6 13a7.97 7.97 0 0 0-.1 1 7.97 7.97 0 0 0 .1 1l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="navbtn" id="addOrderBtn" title="Добавить заказ">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal" id="calendarModal" aria-hidden="true">
+    <div class="sheet">
+      <h3>Выбор даты</h3>
+      <div class="calendar-pop">
+        <input type="date" id="calendarInput">
+        <div class="subtle">Выберите дату, чтобы перейти к заказам этого дня.</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-close="calendarModal">Отмена</button>
+        <button class="btn primary" id="goToDate">Перейти</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="orderModal" aria-hidden="true">
+    <div class="sheet">
+      <h3>Добавить заказ</h3>
+      <div class="grid">
+        <input id="f_name" placeholder="Имя клиента">
+        <input id="f_phone" placeholder="Телефон (формат РФ)">
+        <div class="row">
+          <input id="f_street" placeholder="Улица">
+          <input id="f_house" placeholder="Дом">
+        </div>
+        <div class="row">
+          <input id="f_apt" placeholder="Квартира">
+          <input id="f_time" type="time" placeholder="Время">
+        </div>
+        <div class="row">
+          <input id="f_price" type="number" min="0" placeholder="Цена (₽)">
+          <select id="f_type">
+            <option value="мебель">Мебель</option>
+            <option value="техника">Техника</option>
+            <option value="прочее">Прочее</option>
+          </select>
+        </div>
+        <div class="row">
+          <select id="f_gate">
+            <option value="нет">Шлагбаум: Нет</option>
+            <option value="да">Шлагбаум: Да</option>
+          </select>
+          <select id="f_elevator">
+            <option value="нет">Лифт: Нет</option>
+            <option value="да">Лифт: Да</option>
+          </select>
+        </div>
+        <div class="row">
+          <input id="f_company" placeholder="Компания (необяз.)">
+          <input id="f_contact" placeholder="Контактное лицо (необяз.)">
+        </div>
+        <textarea id="f_customer_note" placeholder="Заметка от заказчика (необяз.)"></textarea>
+        <textarea id="f_comment" placeholder="Комментарий (внутренний)"></textarea>
+        <input type="date" id="f_date" placeholder="Дата">
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-close="orderModal">Отмена</button>
+        <button class="btn primary" id="saveOrder">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="editModal" aria-hidden="true">
+    <div class="sheet">
+      <h3>Редактировать заказ</h3>
+      <div class="grid">
+        <input id="e_name" placeholder="Имя клиента">
+        <input id="e_phone" placeholder="Телефон (формат РФ)">
+        <div class="row">
+          <input id="e_street" placeholder="Улица">
+          <input id="e_house" placeholder="Дом">
+        </div>
+        <div class="row">
+          <input id="e_apt" placeholder="Квартира">
+          <input id="e_time" type="time" placeholder="Время">
+        </div>
+        <div class="row">
+          <input id="e_price" type="number" min="0" placeholder="Цена (₽)">
+          <select id="e_type">
+            <option value="мебель">Мебель</option>
+            <option value="техника">Техника</option>
+            <option value="прочее">Прочее</option>
+          </select>
+        </div>
+        <div class="row">
+          <select id="e_gate">
+            <option value="нет">Шлагбаум: Нет</option>
+            <option value="да">Шлагбаум: Да</option>
+          </select>
+          <select id="e_elevator">
+            <option value="нет">Лифт: Нет</option>
+            <option value="да">Лифт: Да</option>
+          </select>
+        </div>
+        <div class="row">
+          <input id="e_company" placeholder="Компания (необяз.)">
+          <input id="e_contact" placeholder="Контактное лицо (необяз.)">
+        </div>
+        <textarea id="e_customer_note" placeholder="Заметка от заказчика (необяз.)"></textarea>
+        <textarea id="e_comment" placeholder="Комментарий (внутренний)"></textarea>
+        <input type="date" id="e_date" placeholder="Дата">
+      </div>
+      <div class="actions">
+        <button class="btn danger" id="deleteOrder">Удалить</button>
+        <div style="flex:1"></div>
+        <button class="btn ghost" data-close="editModal">Отмена</button>
+        <button class="btn primary" id="updateOrder">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><span></span></div>
+
   <script src="app.js"></script>
 </body>
 </html>
