@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>MOVI — V1.2</title>
+  <title>MOVI — V1.3</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -65,7 +65,7 @@
           <div class="setcard">
             <div class="setmeta">
               <div class="setting-title">Город по умолчанию</div>
-              <div class="setting-desc">Подставляется в адрес заказов (улица/дом/кв в карточке)</div>
+              <div class="setting-desc">Подставляется в адрес заказов</div>
             </div>
             <input id="cityInput" placeholder="Например: Москва">
           </div>
@@ -119,6 +119,25 @@
           <div class="monthstats" id="monthlyStats"></div>
         </div>
       </section>
+
+      <section class="view" id="view-calendar">
+        <div class="calendar-wrap">
+          <div class="cal-head">
+            <button class="btn ghost cal-nav" id="calPrev" aria-label="Предыдущий месяц">←</button>
+            <div class="cal-title" id="calTitle">Месяц Год</div>
+            <button class="btn ghost cal-nav" id="calNext" aria-label="Следующий месяц">→</button>
+          </div>
+          <div class="cal-card">
+            <div class="cal-weekdays">
+              <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn" id="backToHome">Назад</button>
+          </div>
+        </div>
+      </section>
     </main>
 
     <nav class="nav">
@@ -142,20 +161,6 @@
       </div>
       <div class="safe-bottom"></div>
     </nav>
-  </div>
-
-  <div class="modal" id="calendarModal" aria-hidden="true">
-    <div class="sheet">
-      <h3>Выбор даты</h3>
-      <div class="calendar-pop">
-        <input type="date" id="calendarInput">
-        <div class="subtle">Выберите дату, чтобы перейти к заказам этого дня.</div>
-      </div>
-      <div class="actions">
-        <button class="btn ghost" data-close="calendarModal">Отмена</button>
-        <button class="btn primary" id="goToDate">Перейти</button>
-      </div>
-    </div>
   </div>
 
   <div class="modal" id="orderModal" aria-hidden="true">
