@@ -1,4 +1,16 @@
-// MOVI V1.3.5 — Stable full build with 1.3.4 fixes merged
+// --- Safe stub for TelegramGameProxy to avoid TypeError in some shells ---
+(function(){
+  try{
+    if (typeof window !== 'undefined') {
+      if (!window.TelegramGameProxy || typeof window.TelegramGameProxy.receiveEvent !== 'function') {
+        window.TelegramGameProxy = { receiveEvent: function(){} };
+      }
+    }
+  }catch(e){/* noop */}
+})();
+// ----------------------------------------------------------------------
+
+// MOVI V1.3.5 — Stable full build with 1.3.4 fixes merged + hotfix
 const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const fmt=(d)=>new Date(d).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
 const fmtDM=(d)=>new Date(d).toLocaleDateString('ru-RU',{day:'2-digit',month:'long'});
@@ -56,25 +68,6 @@ $("#cityInput")?.addEventListener('input',e=>{ userSettings.city=e.target.value;
 $("#callAppSelect")?.addEventListener('change',e=>{ userSettings.callApp=e.target.value; saveLS('movi_settings',userSettings); });
 $("#mapAppSelect")?.addEventListener('change',e=>{ userSettings.mapApp=e.target.value; saveLS('movi_settings',userSettings); });
 
-// Export / Import
-$("#exportBtn")?.addEventListener('click',()=>{
-  const data={orders,requests,userSettings,userProfile,version:'1.3.5'};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a');
-  a.href=url; a.download='movi-backup.json'; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 0);
-});
-$("#importInput")?.addEventListener('change',(e)=>{
-  const file=e.target.files?.[0]; if(!file) return;
-  const reader=new FileReader(); reader.onload=()=>{
-    try{ const obj=JSON.parse(reader.result);
-      if(obj.orders) orders=obj.orders; if(obj.requests) requests=obj.requests;
-      if(obj.userSettings) userSettings=obj.userSettings; if(obj.userProfile) userProfile=obj.userProfile;
-      persistAll(); applyTheme(); renderDateChips(); renderDay(); showToast('Данные импортированы');
-    }catch(err){ showToast('Ошибка импорта'); }
-  }; reader.readAsText(file);
-});
-
 /* Date chips (home only) */
 const dateStrip=$("#dateStrip");
 function renderDateChips(){
@@ -84,7 +77,8 @@ function renderDateChips(){
     const dt=new Date(base);dt.setDate(base.getDate()+off); const iso=dt.toISOString().slice(0,10);
     const label=dt.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'});
     const chip=document.createElement('button'); chip.className='chip'+(off===0?' active':'');
-    const day=orders[iso]||[]; const dot=document.createElement('span'); dot.className='dot '+(day.some(o=>o.status!=='done')?'active':'');
+    const hasActive=(orders[iso]||[]).some(o=>o.status!=='done');
+    const dot=document.createElement('span'); dot.className='dot'+(hasActive?' active':'');
     chip.append(document.createTextNode(label),dot);
     chip.addEventListener('click',()=>{currentDate=iso; renderDateChips(); renderDay()});
     dateStrip.appendChild(chip);
@@ -144,7 +138,6 @@ function formatPhoneRU(raw){
   const el = document.getElementById(id);
   if(!el) return;
   el.addEventListener('input',()=>{
-    const pos = el.selectionStart;
     el.value = formatPhoneRU(el.value);
     el.setSelectionRange(el.value.length, el.value.length);
   });

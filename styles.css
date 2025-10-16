@@ -21,6 +21,7 @@ header{position:sticky;top:0;z-index:10;background:color-mix(in oklab, var(--bg)
 .chip{padding:10px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);white-space:nowrap;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px}
 .chip.active{background:var(--brand);color:#fff;border-color:transparent}
 .dot{width:8px;height:8px;border-radius:999px;background:#d1d5db}
+.dot.active{background:var(--accent)}
 .content{flex:1;padding:12px 12px 120px}
 .list{display:flex;flex-direction:column;gap:12px}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;position:relative}

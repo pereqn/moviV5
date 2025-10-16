@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>MOVI — V1.3.5 (full fix)</title>
+  <title>MOVI — V1.3.5 (full fix + hotfix)</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -23,7 +23,7 @@
           <button class="iconbtn sm" id="settingsBtn" title="Настройки" aria-label="Открыть настройки" data-top="settings">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2"/>
-              <path d="M19.4 15a7.97 7.97 0 0 0 .1-1 7.97 7.97 0 0 0-.1-1l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1l-.4-2.7h-4l-.4-2.7a8 8 0 0 0-1.7-1l-2.5-1-2 3.4L4.6 13a7.97 7.97 0 0 0-.1 1 7.97 7.97 0 0 0 .1 1l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M19.4 15a7.97 7.97 0 0 0 .1-1 7.97 7.97 0 0 0-.1-1l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1l-.4-2.7h-4l-.4-2.7a8 8 0  0 0-1.7-1l-2.5-1-2 3.4L4.6 13a7.97 7.97 0 0 0-.1 1 7.97 7.97 0 0 0 .1 1l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
             </svg>
           </button>
           <button class="iconbtn" id="calendarBtn" title="Календарь" aria-label="Открыть календарь">
@@ -91,19 +91,6 @@
               <option value="yandex">Yandex Maps</option>
               <option value="2gis">2GIS</option>
             </select>
-          </div>
-          <div class="setcard">
-            <div class="setmeta">
-              <div class="setting-title">Экспорт/Импорт</div>
-              <div class="setting-desc">Сохранить или загрузить данные (JSON)</div>
-            </div>
-            <div class="row">
-              <button class="btn" id="exportBtn">Экспорт JSON</button>
-              <label class="btn">
-                Импорт JSON
-                <input id="importInput" type="file" accept="application/json" style="display:none">
-              </label>
-            </div>
           </div>
         </div>
       </section>
@@ -177,7 +164,7 @@
     </nav>
   </div>
 
-  <!-- Add/Edit modals -->
+  <!-- Modals -->
   <div class="modal" id="orderModal" aria-hidden="true">
     <div class="sheet">
       <h3>Добавить заказ</h3>
