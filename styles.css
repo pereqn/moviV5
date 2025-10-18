@@ -3,5 +3,37 @@
   --primary: #248bf5;
   --primary-dark: #1a73e8;
   --danger: #ea4335;
+  --danger-dark: #d33426;
+  --success: #34a853;
+  --surface: #ffffff;
+  --surface-1: #f8f9fa;
+  --surface-2: #f1f3f4;
+  --surface-3: #e8eaed;
+  --on-surface: #202124;
+  --on-surface-secondary: #5f6368;
+  --on-surface-tertiary: #9aa0a6;
+  --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --header-height: 120px;
+  --nav-height: 80px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
-/* full optimized CSS code here */
+
+[data-theme="dark"] {
+  --surface: #1e1e1e;
+  --surface-1: #2d2d2d;
+  --surface-2: #3c3c3c;
+  --surface-3: #4a4a4a;
+  --on-surface: #ffffff;
+  --on-surface-secondary: #b0b0b0;
+  --on-surface-tertiary: #808080;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* (дальнейший оптимизированный CSS из сообщения пользователя) */
