@@ -79,3 +79,18 @@ input,select,textarea{width:100%;padding:12px 12px;border-radius:12px;border:1px
 .fchip{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:var(--panel);cursor:pointer}
 .fchip.active{background:var(--brand);color:#fff;border-color:transparent}
 .monthstats .row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-top:8px}
+
+
+/* AUTH SCREEN */
+.auth {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 40px 24px;
+  max-width: 420px;
+  margin: 10vh auto 0;
+  text-align: center;
+}
+.auth h2 { margin-bottom: 8px; color: var(--on-surface); }
+.auth p  { color: var(--on-surface-secondary); }
+.auth input { text-align: center; font-size: 16px; }
