@@ -22,7 +22,7 @@ const addDaysISO=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return
 const TMA=(typeof window!=='undefined' && window.Telegram && Telegram.WebApp)?Telegram.WebApp:null; if(TMA){try{TMA.ready()}catch(e){}}
 
 // ---- DOM refs (declare ONCE) ----
-const views={home:$("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
+const views = { auth: $("#view-auth"), home: $("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
 
 let currentDate=todayISO(); let currentFilter='all';
 function saveLS(k,v){localStorage.setItem(k,JSON.stringify(v))}
@@ -396,49 +396,3 @@ window.addEventListener('error',e=>{ console.error(e.error||e.message); const ms
 document.addEventListener('keydown',e=>{ if(!views.home.classList.contains('active')) return; if(e.key==='ArrowLeft'){currentDate=addDaysISO(currentDate,-1);renderDateChips();renderDay(true,'right')} if(e.key==='ArrowRight'){currentDate=addDaysISO(currentDate,1);renderDateChips();renderDay(true,'left')} });
 
 renderDateChips(); renderDay();
-
-
-// AUTH SYSTEM (persistent, no manual logout)
-const isAuthorized = () => {
-  try { return !!localStorage.getItem('movi_user'); } catch(e){ return false; }
-};
-
-const saveUser = (name, phone) => {
-  const user = { name, phone, ts: Date.now() };
-  try { localStorage.setItem('movi_user', JSON.stringify(user)); } catch(e){}
-  userProfile = { name, phone };
-  saveLS('movi_profile', userProfile);
-};
-
-const checkAuth = () => {
-  try {
-    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    if (!isAuthorized() && tgUser?.first_name) {
-      const presetName = tgUser.first_name + (tgUser.last_name ? (' ' + tgUser.last_name) : '');
-      const nameInput = document.getElementById('auth_name');
-      if (nameInput && !nameInput.value) nameInput.value = presetName;
-    }
-  } catch(e){}
-
-  if (!isAuthorized()) {
-    showView('auth');
-  } else {
-    try {
-      const u = JSON.parse(localStorage.getItem('movi_user'));
-      if (u?.name) userProfile.name = u.name;
-      if (u?.phone) userProfile.phone = u.phone;
-    } catch(e){}
-    showView('home');
-  }
-};
-
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('#auth_submit');
-  if (!btn) return;
-  const name = (document.getElementById('auth_name')?.value || '').trim();
-  const phone = (document.getElementById('auth_phone')?.value || '').trim();
-  if (!name || !phone) { showToast('Введите имя и телефон'); return; }
-  saveUser(name, phone);
-  showToast('Добро пожаловать, ' + name + '!');
-  showView('home');
-});

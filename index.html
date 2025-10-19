@@ -40,16 +40,16 @@
 
     <main class="content">
 
-      <section class="view active" id="view-auth">
+      <section class="view" id="view-auth">
         <div class="auth">
           <h2>Вход / Регистрация</h2>
           <p>Введите имя и номер телефона</p>
-          <input id="auth_name" placeholder="Ваше имя">
-          <input id="auth_phone" placeholder="Телефон (+7 ...)" inputmode="tel">
+          <input id="auth_name" placeholder="Имя исполнителя" autocomplete="name">
+          <input id="auth_phone" placeholder="Телефон (+7 ...)" inputmode="tel" pattern="[0-9]*" maxlength="18" autocomplete="tel">
           <button class="btn primary" id="auth_submit">Продолжить</button>
         </div>
       </section>
-
+    
       <section class="view" id="view-home">
         <div class="list" id="ordersList"></div>
         <div class="empty" id="emptyDay" style="display:none">На выбранную дату заказов пока нет.</div>
