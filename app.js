@@ -47,6 +47,16 @@ if(!requests){requests=[{id:'r1',name:'Илья',phone:'+7 (900) 000-00-01',stre
                         {id:'r2',name:'Марина',phone:'+7 (900) 000-00-02',street:'Ленинский',house:'21',apt:'',type:'техника',time:'18:00',price:900,comment:'Стиралка, аккуратно',date:addDaysISO(todayISO(),1),gate:'да',elevator:'да',company:'',contact:'',customer_note:''}]};
 function persistAll(){saveLS('movi_orders',orders);saveLS('movi_requests',requests);saveLS('movi_settings',userSettings);saveLS('movi_profile',userProfile)}
 
+// Добавление CSS переменных для auth flow
+document.documentElement.style.setProperty('--surface-1', '#111827');
+document.documentElement.style.setProperty('--surface-3', '#1f2937');
+document.documentElement.style.setProperty('--on-surface-tertiary', '#9ca3af');
+document.documentElement.style.setProperty('--on-surface-secondary', '#d1d5db');
+document.documentElement.style.setProperty('--primary', '#7c3aed');
+document.documentElement.style.setProperty('--success', '#22c55e');
+document.documentElement.style.setProperty('--danger', '#ef4444');
+document.documentElement.style.setProperty('--shadow-lg', '0 12px 30px rgba(0,0,0,.35)');
+
 /* THEME */
 const prefersDark=window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
@@ -285,19 +295,134 @@ function setStatus(date,index,status){
   const o=(orders[date]||[])[index]; if(!o) return; o.status=status; persistAll(); renderDay(); showToast(status==='done'?'Отмечено выполнено':'Вернули в активные');
 }
 
+/* AUTH FLOW */
+function checkAuthOnLoad() {
+  const auth = loadLS('movi_auth', null);
+  if (auth && auth.loggedIn) {
+    showView('home');
+  } else {
+    showView('start');
+  }
+}
+
+function initAuthHandlers() {
+  // Регистрация
+  $("#goRegister")?.addEventListener('click', () => showView('register'));
+  $("#goLogin")?.addEventListener('click', () => showView('login'));
+  $("#switchToLogin")?.addEventListener('click', () => showView('login'));
+  $("#switchToRegister")?.addEventListener('click', () => showView('register'));
+  
+  // Показать/скрыть пароль
+  $$(".eye").forEach(eye => {
+    eye.addEventListener('click', (e) => {
+      const targetId = e.target.getAttribute('data-for');
+      const input = $("#" + targetId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        e.target.textContent = '🔒';
+      } else {
+        input.type = 'password';
+        e.target.textContent = '👁';
+      }
+    });
+  });
+  
+  // Валидация пароля при регистрации
+  $("#reg_pass")?.addEventListener('input', validatePassword);
+  $("#reg_pass2")?.addEventListener('input', validatePassword);
+  
+  // Отправка форм
+  $("#registerSubmit")?.addEventListener('click', registerUser);
+  $("#loginSubmit")?.addEventListener('click', loginUser);
+}
+
+function validatePassword() {
+  const pass = $("#reg_pass").value;
+  const pass2 = $("#reg_pass2").value;
+  
+  const hints = {
+    len: pass.length >= 8,
+    latin: /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]*$/.test(pass),
+    upper: /[A-Z]/.test(pass),
+    match: pass === pass2 && pass.length > 0
+  };
+  
+  Object.keys(hints).forEach(key => {
+    const li = $(`[data-k="${key}"]`);
+    if (li) {
+      li.classList.toggle('ok', hints[key]);
+      li.classList.toggle('bad', !hints[key]);
+    }
+  });
+  
+  return Object.values(hints).every(Boolean);
+}
+
+function registerUser() {
+  if (!validatePassword()) {
+    showToast('Исправьте ошибки в пароле');
+    return;
+  }
+  
+  const userData = {
+    name: $("#reg_name").value,
+    phone: $("#reg_phone").value,
+    password: $("#reg_pass").value,
+    loggedIn: true
+  };
+  
+  saveLS('movi_auth', userData);
+  showView('home');
+  showToast('Регистрация успешна!');
+}
+
+function loginUser() {
+  const auth = loadLS('movi_auth', null);
+  const phone = $("#login_phone").value;
+  const password = $("#login_pass").value;
+  
+  if (auth && auth.phone === phone && auth.password === password) {
+    auth.loggedIn = true;
+    saveLS('movi_auth', auth);
+    showView('home');
+    showToast('Вход выполнен!');
+  } else {
+    showToast('Неверный телефон или пароль');
+  }
+}
+
 /* VIEWS */
 function showView(key){
-  Object.values(views).forEach(v=>v.classList.remove('active')); views[key].classList.add('active');
-  $$(".navbtn.circ").forEach(b=>b.classList.remove('active')); if(key==='home') $$(".navbtn.circ")[0]?.classList.add('active'); if(key==='requests') $$(".navbtn.circ")[1]?.classList.add('active');
-  $$(".iconbtn[data-top]").forEach(b=>b.classList.remove('active')); if(key==='profile') $("#profileBtn").classList.add('active'); if(key==='settings') $("#settingsBtn").classList.add('active');
+  // Скрыть все views
+  $$('.view').forEach(v => v.classList.remove('active'));
+  
+  // Показать выбранный view
+  const view = $("#view-" + key);
+  if (view) {
+    view.classList.add('active');
+  }
+  
+  Object.values(views).forEach(v=>v.classList.remove('active')); 
+  if (views[key]) views[key].classList.add('active');
+  
+  $$(".navbtn.circ").forEach(b=>b.classList.remove('active')); 
+  if(key==='home') $$(".navbtn.circ")[0]?.classList.add('active'); 
+  if(key==='requests') $$(".navbtn.circ")[1]?.classList.add('active');
+  
+  $$(".iconbtn[data-top]").forEach(b=>b.classList.remove('active')); 
+  if(key==='profile') $("#profileBtn").classList.add('active'); 
+  if(key==='settings') $("#settingsBtn").classList.add('active');
+  
   $("#pageTitle").textContent=({home:'Главный экран',requests:'Заявки',settings:'Настройки',profile:'Профиль',calendar:'Календарь'})[key]||'MOVI';
   $("#dateStrip").style.display = key==='home' ? '' : 'none';
+  
   if(key==='home'){ renderDateChips(); renderDay() }
   if(key==='requests'){ renderRequests() }
   if(key==='profile'){ attachProfileFilters(); renderProfileStats(); syncProfileUI(); }
   if(key==='settings'){ syncSettingsUI(); }
   if(key==='calendar'){ initCalendarFromCurrent(); renderCalendar() }
 }
+
 $$(".navbtn.circ").forEach((btn,idx)=>{ btn.addEventListener('click',()=>{ const map={0:'home',1:'requests'}; if(map[idx]) showView(map[idx]) }) });
 $("#profileBtn").addEventListener('click',()=>{ showView('profile') });
 $("#settingsBtn").addEventListener('click',()=>{ showView('settings') });
@@ -393,6 +518,21 @@ function showToast(msg){ const t=$("#toast"); t.querySelector('span').textConten
 window.addEventListener('error',e=>{ console.error(e.error||e.message); const msg = (e && e.message)? e.message : 'Ошибка скрипта'; showToast(msg) });
 
 /* INIT */
-document.addEventListener('keydown',e=>{ if(!views.home.classList.contains('active')) return; if(e.key==='ArrowLeft'){currentDate=addDaysISO(currentDate,-1);renderDateChips();renderDay(true,'right')} if(e.key==='ArrowRight'){currentDate=addDaysISO(currentDate,1);renderDateChips();renderDay(true,'left')} });
+function initApp() {
+  initAuthHandlers();
+  checkAuthOnLoad();
+  applyTheme();
+  
+  // Инициализация только если пользователь авторизован
+  if (loadLS('movi_auth', null)?.loggedIn) {
+    renderDateChips();
+    renderDay();
+    syncSettingsUI();
+    syncProfileUI();
+  }
+}
 
-renderDateChips(); renderDay();
+// Запуск приложения
+initApp();
+
+document.addEventListener('keydown',e=>{ if(!views.home.classList.contains('active')) return; if(e.key==='ArrowLeft'){currentDate=addDaysISO(currentDate,-1);renderDateChips();renderDay(true,'right')} if(e.key==='ArrowRight'){currentDate=addDaysISO(currentDate,1);renderDateChips();renderDay(true,'left')} });
