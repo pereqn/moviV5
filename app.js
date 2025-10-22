@@ -22,7 +22,7 @@ const addDaysISO=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return
 const TMA=(typeof window!=='undefined' && window.Telegram && Telegram.WebApp)?Telegram.WebApp:null; if(TMA){try{TMA.ready()}catch(e){}}
 
 // ---- DOM refs (declare ONCE) ----
-const views = { auth: $("#view-auth"), home: $("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
+const views={home:$("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
 
 let currentDate=todayISO(); let currentFilter='all';
 function saveLS(k,v){localStorage.setItem(k,JSON.stringify(v))}
@@ -379,7 +379,7 @@ function renderCalendar(){
   $("#calTitle").textContent=monthTitle(calYear,calMonth);
   const grid=$("#calGrid"); const cells=monthDaysGrid(calYear,calMonth);
   grid.innerHTML=cells.map(c=> c.muted?`<div class="day muted"><div class="dnum"></div></div>`:`<div class="day" data-iso="${c.iso}"><div class="dnum">${String(c.d)}</div><div class="${c.dot==='active'?'dotmini active':'dotmini'}"></div></div>`).join('');
-  $$("#calGrid .day").forEach(el=>{ if(!el.dataset.iso) return; el.addEventListener('click',()=>{ currentDate=el.dataset.iso; showView('home'); showToast('День выбран: '+fmt(currentDate)) }) });
+  $$("#calGrid .day").forEach(el=>{ if(!el.dataset.iso) return; el.addEventListener('click',()=>{ currentDate=el.dataset.iso; checkAuthOnLoad(); showToast('День выбран: '+fmt(currentDate)) }) });
 }
 $("#calPrev")?.addEventListener('click',()=>{ calMonth--; if(calMonth<0){calMonth=11; calYear--} renderCalendar() });
 $("#calNext")?.addEventListener('click',()=>{ calMonth++; if(calMonth>11){calMonth=0; calYear++} renderCalendar() });

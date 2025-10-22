@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="light">
+<html data-theme="dark" lang="ru" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
@@ -39,17 +39,63 @@
     </header>
 
     <main class="content">
-
-      <section class="view" id="view-auth">
-        <div class="auth">
-          <h2>Вход / Регистрация</h2>
-          <p>Введите имя и номер телефона</p>
-          <input id="auth_name" placeholder="Имя исполнителя" autocomplete="name">
-          <input id="auth_phone" placeholder="Телефон (+7 ...)" inputmode="tel" pattern="[0-9]*" maxlength="18" autocomplete="tel">
-          <button class="btn primary" id="auth_submit">Продолжить</button>
+      <!-- AUTH FLOW -->
+      <section class="view active" id="view-start">
+        <div class="start">
+          <h1 class="brand">MOVI</h1>
+          <p class="subtitle">DriverBot</p>
+          <div class="start-actions">
+            <button class="btn primary lg" id="goRegister">Зарегистрироваться</button>
+            <button class="btn ghost lg" id="goLogin">Войти</button>
+          </div>
         </div>
       </section>
-    
+
+      <section class="view" id="view-register">
+        <div class="authcard">
+          <h2>Регистрация</h2>
+          <div class="grid">
+            <input id="reg_name" placeholder="Имя" autocomplete="name">
+            <input id="reg_phone" placeholder="+7 ..." inputmode="tel" autocomplete="tel">
+            <div class="passwrap">
+              <input id="reg_pass" type="password" placeholder="Пароль (мин. 8, EN, 1 заглавная)" autocomplete="new-password">
+              <button class="eye" data-for="reg_pass" aria-label="Показать пароль">👁</button>
+            </div>
+            <div class="passwrap">
+              <input id="reg_pass2" type="password" placeholder="Подтвердите пароль" autocomplete="new-password">
+              <button class="eye" data-for="reg_pass2" aria-label="Показать пароль">👁</button>
+            </div>
+            <ul class="hints" id="reg_hints">
+              <li data-k="len">Не менее 8 символов</li>
+              <li data-k="latin">Только латиница / цифры</li>
+              <li data-k="upper">Минимум 1 заглавная</li>
+              <li data-k="match">Пароли совпадают</li>
+            </ul>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="registerSubmit">Зарегистрироваться</button>
+          </div>
+          <div class="muted switch">Уже есть аккаунт? <button class="link" id="switchToLogin">Войти</button></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-login">
+        <div class="authcard">
+          <h2>Вход</h2>
+          <div class="grid">
+            <input id="login_phone" placeholder="+7 ..." inputmode="tel" autocomplete="tel">
+            <div class="passwrap">
+              <input id="login_pass" type="password" placeholder="Пароль" autocomplete="current-password">
+              <button class="eye" data-for="login_pass" aria-label="Показать пароль">👁</button>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="loginSubmit">Войти</button>
+          </div>
+          <div class="muted switch">Нет аккаунта? <button class="link" id="switchToRegister">Зарегистрироваться</button></div>
+        </div>
+      </section>
+
       <section class="view" id="view-home">
         <div class="list" id="ordersList"></div>
         <div class="empty" id="emptyDay" style="display:none">На выбранную дату заказов пока нет.</div>
