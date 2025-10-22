@@ -22,7 +22,16 @@ const addDaysISO=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return
 const TMA=(typeof window!=='undefined' && window.Telegram && Telegram.WebApp)?Telegram.WebApp:null; if(TMA){try{TMA.ready()}catch(e){}}
 
 // ---- DOM refs (declare ONCE) ----
-const views={home:$("#view-home"),requests:$("#view-requests"),settings:$("#view-settings"),profile:$("#view-profile"),calendar:$("#view-calendar")};
+const views={
+  start: $("#view-start"),
+  login: $("#view-login"), 
+  register: $("#view-register"),
+  home:$("#view-home"),
+  requests:$("#view-requests"),
+  settings:$("#view-settings"),
+  profile:$("#view-profile"),
+  calendar:$("#view-calendar")
+};
 
 let currentDate=todayISO(); let currentFilter='all';
 function saveLS(k,v){localStorage.setItem(k,JSON.stringify(v))}
@@ -65,6 +74,157 @@ function applyTheme(){
   document.documentElement.setAttribute('data-theme', theme);
 }
 prefersDark.addEventListener('change',applyTheme); applyTheme();
+
+/* AUTH FLOW - ОСНОВНАЯ ЛОГИКА */
+function checkAuthOnLoad() {
+  const auth = loadLS('movi_auth', null);
+  if (auth && auth.loggedIn) {
+    showApp(); // Показываем основное приложение
+  } else {
+    showAuth(); // Показываем экран авторизации
+  }
+}
+
+function showAuth() {
+  // Скрываем основное приложение
+  $(".nav").style.display = 'none';
+  $("#dateStrip").style.display = 'none';
+  $("#pageTitle").textContent = 'MOVI';
+  
+  // Показываем только экраны авторизации
+  $$('.view').forEach(v => v.classList.remove('active'));
+  $("#view-start").classList.add('active');
+}
+
+function showApp() {
+  // Показываем основное приложение
+  $(".nav").style.display = 'block';
+  $("#dateStrip").style.display = '';
+  
+  // Инициализируем основное приложение
+  renderDateChips();
+  renderDay();
+  syncSettingsUI();
+  syncProfileUI();
+  showView('home');
+}
+
+function initAuthHandlers() {
+  // Навигация между экранами авторизации
+  $("#goRegister")?.addEventListener('click', () => {
+    $$('.view').forEach(v => v.classList.remove('active'));
+    $("#view-register").classList.add('active');
+  });
+  
+  $("#goLogin")?.addEventListener('click', () => {
+    $$('.view').forEach(v => v.classList.remove('active'));
+    $("#view-login").classList.add('active');
+  });
+  
+  $("#switchToLogin")?.addEventListener('click', () => {
+    $$('.view').forEach(v => v.classList.remove('active'));
+    $("#view-login").classList.add('active');
+  });
+  
+  $("#switchToRegister")?.addEventListener('click', () => {
+    $$('.view').forEach(v => v.classList.remove('active'));
+    $("#view-register").classList.add('active');
+  });
+  
+  // Показать/скрыть пароль
+  $$(".eye").forEach(eye => {
+    eye.addEventListener('click', (e) => {
+      const targetId = e.target.getAttribute('data-for');
+      const input = $("#" + targetId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        e.target.textContent = '🔒';
+      } else {
+        input.type = 'password';
+        e.target.textContent = '👁';
+      }
+    });
+  });
+  
+  // Валидация пароля при регистрации
+  $("#reg_pass")?.addEventListener('input', validatePassword);
+  $("#reg_pass2")?.addEventListener('input', validatePassword);
+  
+  // Отправка форм
+  $("#registerSubmit")?.addEventListener('click', registerUser);
+  $("#loginSubmit")?.addEventListener('click', loginUser);
+}
+
+function validatePassword() {
+  const pass = $("#reg_pass").value;
+  const pass2 = $("#reg_pass2").value;
+  
+  const hints = {
+    len: pass.length >= 8,
+    latin: /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]*$/.test(pass),
+    upper: /[A-Z]/.test(pass),
+    match: pass === pass2 && pass.length > 0
+  };
+  
+  Object.keys(hints).forEach(key => {
+    const li = $(`[data-k="${key}"]`);
+    if (li) {
+      li.classList.toggle('ok', hints[key]);
+      li.classList.toggle('bad', !hints[key]);
+    }
+  });
+  
+  return Object.values(hints).every(Boolean);
+}
+
+function registerUser() {
+  if (!validatePassword()) {
+    showToast('Исправьте ошибки в пароле');
+    return;
+  }
+  
+  const name = $("#reg_name").value.trim();
+  const phone = $("#reg_phone").value.trim();
+  const password = $("#reg_pass").value;
+  
+  if (!name || !phone || !password) {
+    showToast('Заполните все поля');
+    return;
+  }
+  
+  const userData = {
+    name: name,
+    phone: phone,
+    password: password,
+    loggedIn: true
+  };
+  
+  saveLS('movi_auth', userData);
+  showToast('Регистрация успешна!');
+  showApp(); // Переходим в основное приложение
+}
+
+function loginUser() {
+  const auth = loadLS('movi_auth', null);
+  const phone = $("#login_phone").value.trim();
+  const password = $("#login_pass").value;
+  
+  if (!phone || !password) {
+    showToast('Заполните все поля');
+    return;
+  }
+  
+  if (auth && auth.phone === phone && auth.password === password) {
+    auth.loggedIn = true;
+    saveLS('movi_auth', auth);
+    showToast('Вход выполнен!');
+    showApp(); // Переходим в основное приложение
+  } else {
+    showToast('Неверный телефон или пароль');
+  }
+}
+
+/* ОСТАЛЬНОЙ КОД ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ */
 
 /* Settings UI */
 function syncSettingsUI(){
@@ -295,114 +455,15 @@ function setStatus(date,index,status){
   const o=(orders[date]||[])[index]; if(!o) return; o.status=status; persistAll(); renderDay(); showToast(status==='done'?'Отмечено выполнено':'Вернули в активные');
 }
 
-/* AUTH FLOW */
-function checkAuthOnLoad() {
-  const auth = loadLS('movi_auth', null);
-  if (auth && auth.loggedIn) {
-    showView('home');
-  } else {
-    showView('start');
-  }
-}
-
-function initAuthHandlers() {
-  // Регистрация
-  $("#goRegister")?.addEventListener('click', () => showView('register'));
-  $("#goLogin")?.addEventListener('click', () => showView('login'));
-  $("#switchToLogin")?.addEventListener('click', () => showView('login'));
-  $("#switchToRegister")?.addEventListener('click', () => showView('register'));
-  
-  // Показать/скрыть пароль
-  $$(".eye").forEach(eye => {
-    eye.addEventListener('click', (e) => {
-      const targetId = e.target.getAttribute('data-for');
-      const input = $("#" + targetId);
-      if (input.type === 'password') {
-        input.type = 'text';
-        e.target.textContent = '🔒';
-      } else {
-        input.type = 'password';
-        e.target.textContent = '👁';
-      }
-    });
-  });
-  
-  // Валидация пароля при регистрации
-  $("#reg_pass")?.addEventListener('input', validatePassword);
-  $("#reg_pass2")?.addEventListener('input', validatePassword);
-  
-  // Отправка форм
-  $("#registerSubmit")?.addEventListener('click', registerUser);
-  $("#loginSubmit")?.addEventListener('click', loginUser);
-}
-
-function validatePassword() {
-  const pass = $("#reg_pass").value;
-  const pass2 = $("#reg_pass2").value;
-  
-  const hints = {
-    len: pass.length >= 8,
-    latin: /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]*$/.test(pass),
-    upper: /[A-Z]/.test(pass),
-    match: pass === pass2 && pass.length > 0
-  };
-  
-  Object.keys(hints).forEach(key => {
-    const li = $(`[data-k="${key}"]`);
-    if (li) {
-      li.classList.toggle('ok', hints[key]);
-      li.classList.toggle('bad', !hints[key]);
-    }
-  });
-  
-  return Object.values(hints).every(Boolean);
-}
-
-function registerUser() {
-  if (!validatePassword()) {
-    showToast('Исправьте ошибки в пароле');
-    return;
-  }
-  
-  const userData = {
-    name: $("#reg_name").value,
-    phone: $("#reg_phone").value,
-    password: $("#reg_pass").value,
-    loggedIn: true
-  };
-  
-  saveLS('movi_auth', userData);
-  showView('home');
-  showToast('Регистрация успешна!');
-}
-
-function loginUser() {
-  const auth = loadLS('movi_auth', null);
-  const phone = $("#login_phone").value;
-  const password = $("#login_pass").value;
-  
-  if (auth && auth.phone === phone && auth.password === password) {
-    auth.loggedIn = true;
-    saveLS('movi_auth', auth);
-    showView('home');
-    showToast('Вход выполнен!');
-  } else {
-    showToast('Неверный телефон или пароль');
-  }
-}
-
 /* VIEWS */
 function showView(key){
-  // Скрыть все views
-  $$('.view').forEach(v => v.classList.remove('active'));
+  // Скрыть все views основного приложения
+  Object.values(views).forEach(v=>{
+    if (v.id !== 'view-start' && v.id !== 'view-login' && v.id !== 'view-register') {
+      v.classList.remove('active');
+    }
+  }); 
   
-  // Показать выбранный view
-  const view = $("#view-" + key);
-  if (view) {
-    view.classList.add('active');
-  }
-  
-  Object.values(views).forEach(v=>v.classList.remove('active')); 
   if (views[key]) views[key].classList.add('active');
   
   $$(".navbtn.circ").forEach(b=>b.classList.remove('active')); 
@@ -504,7 +565,7 @@ function renderCalendar(){
   $("#calTitle").textContent=monthTitle(calYear,calMonth);
   const grid=$("#calGrid"); const cells=monthDaysGrid(calYear,calMonth);
   grid.innerHTML=cells.map(c=> c.muted?`<div class="day muted"><div class="dnum"></div></div>`:`<div class="day" data-iso="${c.iso}"><div class="dnum">${String(c.d)}</div><div class="${c.dot==='active'?'dotmini active':'dotmini'}"></div></div>`).join('');
-  $$("#calGrid .day").forEach(el=>{ if(!el.dataset.iso) return; el.addEventListener('click',()=>{ currentDate=el.dataset.iso; checkAuthOnLoad(); showToast('День выбран: '+fmt(currentDate)) }) });
+  $$("#calGrid .day").forEach(el=>{ if(!el.dataset.iso) return; el.addEventListener('click',()=>{ currentDate=el.dataset.iso; showToast('День выбран: '+fmt(currentDate)) }) });
 }
 $("#calPrev")?.addEventListener('click',()=>{ calMonth--; if(calMonth<0){calMonth=11; calYear--} renderCalendar() });
 $("#calNext")?.addEventListener('click',()=>{ calMonth++; if(calMonth>11){calMonth=0; calYear++} renderCalendar() });
@@ -522,14 +583,6 @@ function initApp() {
   initAuthHandlers();
   checkAuthOnLoad();
   applyTheme();
-  
-  // Инициализация только если пользователь авторизован
-  if (loadLS('movi_auth', null)?.loggedIn) {
-    renderDateChips();
-    renderDay();
-    syncSettingsUI();
-    syncProfileUI();
-  }
 }
 
 // Запуск приложения

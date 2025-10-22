@@ -18,7 +18,7 @@
             <path d="M5 20a7 7 0 0 1 14 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
           </svg>
         </button>
-        <div class="title" id="pageTitle">Главный экран</div>
+        <div class="title" id="pageTitle">MOVI</div>
         <div class="righticons">
           <button class="iconbtn sm" id="settingsBtn" title="Настройки" aria-label="Открыть настройки" data-top="settings">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -35,22 +35,23 @@
         </div>
       </div>
       <div class="version">V1.3.5</div>
-      <div class="datestrip" id="dateStrip" aria-label="Дни (свайп)"></div>
+      <div class="datestrip" id="dateStrip" aria-label="Дни (свайп)" style="display:none"></div>
     </header>
 
     <main class="content">
-      <!-- AUTH FLOW -->
+      <!-- START SCREEN - только кнопки Войти/Зарегистрироваться -->
       <section class="view active" id="view-start">
         <div class="start">
           <h1 class="brand">MOVI</h1>
           <p class="subtitle">DriverBot</p>
           <div class="start-actions">
-            <button class="btn primary lg" id="goRegister">Зарегистрироваться</button>
-            <button class="btn ghost lg" id="goLogin">Войти</button>
+            <button class="btn primary lg" id="goLogin">Войти</button>
+            <button class="btn ghost lg" id="goRegister">Зарегистрироваться</button>
           </div>
         </div>
       </section>
 
+      <!-- REGISTER SCREEN -->
       <section class="view" id="view-register">
         <div class="authcard">
           <h2>Регистрация</h2>
@@ -79,6 +80,7 @@
         </div>
       </section>
 
+      <!-- LOGIN SCREEN -->
       <section class="view" id="view-login">
         <div class="authcard">
           <h2>Вход</h2>
@@ -96,6 +98,7 @@
         </div>
       </section>
 
+      <!-- MAIN APP SCREENS (скрыты до авторизации) -->
       <section class="view" id="view-home">
         <div class="list" id="ordersList"></div>
         <div class="empty" id="emptyDay" style="display:none">На выбранную дату заказов пока нет.</div>
@@ -198,7 +201,8 @@
       </section>
     </main>
 
-    <nav class="nav">
+    <!-- NAVIGATION (скрыта до авторизации) -->
+    <nav class="nav" style="display:none">
       <div class="dock">
         <button class="navbtn circ active" data-nav="home" title="Главная (по дням)">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">

@@ -138,3 +138,43 @@ input,select,textarea{width:100%;padding:12px 12px;border-radius:12px;border:1px
 .muted{color:var(--on-surface-tertiary);text-align:center;margin-top:12px;font-size:13px}
 .link{background:transparent;border:none;color:var(--primary);cursor:pointer}
 .btn:active,.navbtn:active,.iconbtn:active{transform:scale(1.02)}
+/* START SCREEN STYLES */
+#view-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.start {
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+.brand {
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--brand);
+  margin-bottom: 8px;
+  letter-spacing: 3px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 16px;
+  margin-bottom: 40px;
+}
+
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn.lg {
+  min-height: 54px;
+  font-size: 16px;
+  font-weight: 600;
+}
