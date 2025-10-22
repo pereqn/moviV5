@@ -23,9 +23,9 @@ const TMA=(typeof window!=='undefined' && window.Telegram && Telegram.WebApp)?Te
 
 // ---- DOM refs (declare ONCE) ----
 const views={
-  start: $("#view-start"),
-  login: $("#view-login"), 
-  register: $("#view-register"),
+  start:$("#view-start"), 
+  register:$("#view-register"), 
+  login:$("#view-login"),
   home:$("#view-home"),
   requests:$("#view-requests"),
   settings:$("#view-settings"),
@@ -74,157 +74,6 @@ function applyTheme(){
   document.documentElement.setAttribute('data-theme', theme);
 }
 prefersDark.addEventListener('change',applyTheme); applyTheme();
-
-/* AUTH FLOW - ОСНОВНАЯ ЛОГИКА */
-function checkAuthOnLoad() {
-  const auth = loadLS('movi_auth', null);
-  if (auth && auth.loggedIn) {
-    showApp(); // Показываем основное приложение
-  } else {
-    showAuth(); // Показываем экран авторизации
-  }
-}
-
-function showAuth() {
-  // Скрываем основное приложение
-  $(".nav").style.display = 'none';
-  $("#dateStrip").style.display = 'none';
-  $("#pageTitle").textContent = 'MOVI';
-  
-  // Показываем только экраны авторизации
-  $$('.view').forEach(v => v.classList.remove('active'));
-  $("#view-start").classList.add('active');
-}
-
-function showApp() {
-  // Показываем основное приложение
-  $(".nav").style.display = 'block';
-  $("#dateStrip").style.display = '';
-  
-  // Инициализируем основное приложение
-  renderDateChips();
-  renderDay();
-  syncSettingsUI();
-  syncProfileUI();
-  showView('home');
-}
-
-function initAuthHandlers() {
-  // Навигация между экранами авторизации
-  $("#goRegister")?.addEventListener('click', () => {
-    $$('.view').forEach(v => v.classList.remove('active'));
-    $("#view-register").classList.add('active');
-  });
-  
-  $("#goLogin")?.addEventListener('click', () => {
-    $$('.view').forEach(v => v.classList.remove('active'));
-    $("#view-login").classList.add('active');
-  });
-  
-  $("#switchToLogin")?.addEventListener('click', () => {
-    $$('.view').forEach(v => v.classList.remove('active'));
-    $("#view-login").classList.add('active');
-  });
-  
-  $("#switchToRegister")?.addEventListener('click', () => {
-    $$('.view').forEach(v => v.classList.remove('active'));
-    $("#view-register").classList.add('active');
-  });
-  
-  // Показать/скрыть пароль
-  $$(".eye").forEach(eye => {
-    eye.addEventListener('click', (e) => {
-      const targetId = e.target.getAttribute('data-for');
-      const input = $("#" + targetId);
-      if (input.type === 'password') {
-        input.type = 'text';
-        e.target.textContent = '🔒';
-      } else {
-        input.type = 'password';
-        e.target.textContent = '👁';
-      }
-    });
-  });
-  
-  // Валидация пароля при регистрации
-  $("#reg_pass")?.addEventListener('input', validatePassword);
-  $("#reg_pass2")?.addEventListener('input', validatePassword);
-  
-  // Отправка форм
-  $("#registerSubmit")?.addEventListener('click', registerUser);
-  $("#loginSubmit")?.addEventListener('click', loginUser);
-}
-
-function validatePassword() {
-  const pass = $("#reg_pass").value;
-  const pass2 = $("#reg_pass2").value;
-  
-  const hints = {
-    len: pass.length >= 8,
-    latin: /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]*$/.test(pass),
-    upper: /[A-Z]/.test(pass),
-    match: pass === pass2 && pass.length > 0
-  };
-  
-  Object.keys(hints).forEach(key => {
-    const li = $(`[data-k="${key}"]`);
-    if (li) {
-      li.classList.toggle('ok', hints[key]);
-      li.classList.toggle('bad', !hints[key]);
-    }
-  });
-  
-  return Object.values(hints).every(Boolean);
-}
-
-function registerUser() {
-  if (!validatePassword()) {
-    showToast('Исправьте ошибки в пароле');
-    return;
-  }
-  
-  const name = $("#reg_name").value.trim();
-  const phone = $("#reg_phone").value.trim();
-  const password = $("#reg_pass").value;
-  
-  if (!name || !phone || !password) {
-    showToast('Заполните все поля');
-    return;
-  }
-  
-  const userData = {
-    name: name,
-    phone: phone,
-    password: password,
-    loggedIn: true
-  };
-  
-  saveLS('movi_auth', userData);
-  showToast('Регистрация успешна!');
-  showApp(); // Переходим в основное приложение
-}
-
-function loginUser() {
-  const auth = loadLS('movi_auth', null);
-  const phone = $("#login_phone").value.trim();
-  const password = $("#login_pass").value;
-  
-  if (!phone || !password) {
-    showToast('Заполните все поля');
-    return;
-  }
-  
-  if (auth && auth.phone === phone && auth.password === password) {
-    auth.loggedIn = true;
-    saveLS('movi_auth', auth);
-    showToast('Вход выполнен!');
-    showApp(); // Переходим в основное приложение
-  } else {
-    showToast('Неверный телефон или пароль');
-  }
-}
-
-/* ОСТАЛЬНОЙ КОД ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ */
 
 /* Settings UI */
 function syncSettingsUI(){
@@ -455,32 +304,208 @@ function setStatus(date,index,status){
   const o=(orders[date]||[])[index]; if(!o) return; o.status=status; persistAll(); renderDay(); showToast(status==='done'?'Отмечено выполнено':'Вернули в активные');
 }
 
+/* AUTH FLOW */
+function checkAuthOnLoad() {
+  const auth = loadLS('movi_auth', null);
+  if (auth && auth.loggedIn) {
+    showMainApp();
+  } else {
+    showView('start');
+    hideHeaderAndNav();
+  }
+}
+
+function hideHeaderAndNav() {
+  $("header").style.display = 'none';
+  $("nav").style.display = 'none';
+}
+
+function showHeaderAndNav() {
+  $("header").style.display = '';
+  $("nav").style.display = '';
+}
+
+function showMainApp() {
+  showHeaderAndNav();
+  showView('home');
+  renderDateChips();
+  renderDay();
+  syncSettingsUI();
+  syncProfileUI();
+}
+
+function initAuthHandlers() {
+  // Регистрация
+  $("#goRegister")?.addEventListener('click', () => showView('register'));
+  $("#goLogin")?.addEventListener('click', () => showView('login'));
+  $("#switchToLogin")?.addEventListener('click', () => showView('login'));
+  $("#switchToRegister")?.addEventListener('click', () => showView('register'));
+  
+  // Показать/скрыть пароль
+  $$(".eye").forEach(eye => {
+    eye.addEventListener('click', (e) => {
+      const targetId = e.target.getAttribute('data-for');
+      const input = $("#" + targetId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        e.target.textContent = '🔒';
+      } else {
+        input.type = 'password';
+        e.target.textContent = '👁';
+      }
+    });
+  });
+  
+  // Валидация пароля при регистрации
+  $("#reg_pass")?.addEventListener('input', validatePassword);
+  $("#reg_pass2")?.addEventListener('input', validatePassword);
+  
+  // Отправка форм
+  $("#registerSubmit")?.addEventListener('click', registerUser);
+  $("#loginSubmit")?.addEventListener('click', loginUser);
+}
+
+function validatePassword() {
+  const pass = $("#reg_pass").value;
+  const pass2 = $("#reg_pass2").value;
+  
+  const hints = {
+    len: pass.length >= 8,
+    latin: /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]*$/.test(pass),
+    upper: /[A-Z]/.test(pass),
+    match: pass === pass2 && pass.length > 0
+  };
+  
+  Object.keys(hints).forEach(key => {
+    const li = $(`[data-k="${key}"]`);
+    if (li) {
+      li.classList.toggle('ok', hints[key]);
+      li.classList.toggle('bad', !hints[key]);
+    }
+  });
+  
+  return Object.values(hints).every(Boolean);
+}
+
+function registerUser() {
+  if (!validatePassword()) {
+    showToast('Исправьте ошибки в пароле');
+    return;
+  }
+  
+  const name = $("#reg_name").value.trim();
+  const phone = $("#reg_phone").value.trim();
+  
+  if (!name) {
+    showToast('Введите имя');
+    return;
+  }
+  
+  if (!phone || phone.length < 10) {
+    showToast('Введите корректный телефон');
+    return;
+  }
+  
+  const userData = {
+    name: name,
+    phone: phone,
+    password: $("#reg_pass").value,
+    loggedIn: true
+  };
+  
+  saveLS('movi_auth', userData);
+  showMainApp();
+  showToast('Регистрация успешна!');
+}
+
+function loginUser() {
+  const auth = loadLS('movi_auth', null);
+  const phone = $("#login_phone").value.trim();
+  const password = $("#login_pass").value;
+  
+  if (!auth) {
+    showToast('Аккаунт не найден. Зарегистрируйтесь');
+    return;
+  }
+  
+  if (auth.phone === phone && auth.password === password) {
+    auth.loggedIn = true;
+    saveLS('movi_auth', auth);
+    showMainApp();
+    showToast('Вход выполнен!');
+  } else {
+    showToast('Неверный телефон или пароль');
+  }
+}
+
+function logout() {
+  const auth = loadLS('movi_auth', null);
+  if (auth) {
+    auth.loggedIn = false;
+    saveLS('movi_auth', auth);
+  }
+  showView('start');
+  hideHeaderAndNav();
+  showToast('Вы вышли из системы');
+}
+
 /* VIEWS */
 function showView(key){
-  // Скрыть все views основного приложения
-  Object.values(views).forEach(v=>{
-    if (v.id !== 'view-start' && v.id !== 'view-login' && v.id !== 'view-register') {
-      v.classList.remove('active');
+  // Скрываем хедер и навигацию для auth экранов
+  if (['start', 'register', 'login'].includes(key)) {
+    hideHeaderAndNav();
+  } else {
+    showHeaderAndNav();
+  }
+  
+  // Скрыть все views
+  $$('.view').forEach(v => v.classList.remove('active'));
+  
+  // Показать выбранный view
+  const view = $("#view-" + key);
+  if (view) {
+    view.classList.add('active');
+  }
+  
+  // Обновление навигации только для основных экранов
+  if (['home', 'requests', 'settings', 'profile', 'calendar'].includes(key)) {
+    Object.values(views).forEach(v=>v.classList.remove('active')); 
+    if (views[key]) views[key].classList.add('active');
+    
+    $$(".navbtn.circ").forEach(b=>b.classList.remove('active')); 
+    if(key==='home') $$(".navbtn.circ")[0]?.classList.add('active'); 
+    if(key==='requests') $$(".navbtn.circ")[1]?.classList.add('active');
+    
+    $$(".iconbtn[data-top]").forEach(b=>b.classList.remove('active')); 
+    if(key==='profile') $("#profileBtn").classList.add('active'); 
+    if(key==='settings') $("#settingsBtn").classList.add('active');
+    
+    $("#pageTitle").textContent=({home:'Главный экран',requests:'Заявки',settings:'Настройки',profile:'Профиль',calendar:'Календарь'})[key]||'MOVI';
+    $("#dateStrip").style.display = key==='home' ? '' : 'none';
+  }
+  
+  if(key==='home'){ 
+    if (loadLS('movi_auth', null)?.loggedIn) {
+      renderDateChips(); 
+      renderDay();
     }
-  }); 
-  
-  if (views[key]) views[key].classList.add('active');
-  
-  $$(".navbtn.circ").forEach(b=>b.classList.remove('active')); 
-  if(key==='home') $$(".navbtn.circ")[0]?.classList.add('active'); 
-  if(key==='requests') $$(".navbtn.circ")[1]?.classList.add('active');
-  
-  $$(".iconbtn[data-top]").forEach(b=>b.classList.remove('active')); 
-  if(key==='profile') $("#profileBtn").classList.add('active'); 
-  if(key==='settings') $("#settingsBtn").classList.add('active');
-  
-  $("#pageTitle").textContent=({home:'Главный экран',requests:'Заявки',settings:'Настройки',profile:'Профиль',calendar:'Календарь'})[key]||'MOVI';
-  $("#dateStrip").style.display = key==='home' ? '' : 'none';
-  
-  if(key==='home'){ renderDateChips(); renderDay() }
+  }
   if(key==='requests'){ renderRequests() }
   if(key==='profile'){ attachProfileFilters(); renderProfileStats(); syncProfileUI(); }
-  if(key==='settings'){ syncSettingsUI(); }
+  if(key==='settings'){ 
+    syncSettingsUI(); 
+    // Добавляем кнопку выхода если её нет
+    if (!$("#logoutBtn")) {
+      const logoutBtn = document.createElement('button');
+      logoutBtn.id = 'logoutBtn';
+      logoutBtn.className = 'btn danger';
+      logoutBtn.textContent = 'Выйти';
+      logoutBtn.style.marginTop = '20px';
+      logoutBtn.style.width = '100%';
+      logoutBtn.addEventListener('click', logout);
+      $(".settings").appendChild(logoutBtn);
+    }
+  }
   if(key==='calendar'){ initCalendarFromCurrent(); renderCalendar() }
 }
 

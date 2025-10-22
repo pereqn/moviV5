@@ -178,3 +178,23 @@ input,select,textarea{width:100%;padding:12px 12px;border-radius:12px;border:1px
   font-size: 16px;
   font-weight: 600;
 }
+/* Hide header and nav on auth screens */
+body:has(#view-start.active) header,
+body:has(#view-start.active) nav,
+body:has(#view-register.active) header,
+body:has(#view-register.active) nav,
+body:has(#view-login.active) header,
+body:has(#view-login.active) nav {
+  display: none !important;
+}
+
+/* Ensure auth screens take full height */
+#view-start,
+#view-register,
+#view-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
