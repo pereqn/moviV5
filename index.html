@@ -5,8 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>MOVI — V1.3.5 (full fix + hotfix)</title>
+  <title>MOVI — V1.4.0 (Supabase Sync)</title>
+
+  <!-- Основные стили -->
   <link rel="stylesheet" href="styles.css">
+  <!-- Эффекты активных кнопок -->
+  <link rel="stylesheet" href="styles_active_buttons.css">
+
+  <!-- Supabase JS (через CDN) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="app">
@@ -22,8 +29,8 @@
         <div class="righticons">
           <button class="iconbtn sm" id="settingsBtn" title="Настройки" aria-label="Открыть настройки" data-top="settings">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2"/>
-              <path d="M19.4 15a7.97 7.97 0 0 0 .1-1 7.97 7.97 0 0 0-.1-1l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1l-.4-2.7h-4l-.4-2.7a8 8 0  0 0-1.7-1l-2.5-1-2 3.4L4.6 13a7.97 7.97 0 0 0-.1 1 7.97 7.97 0 0 0 .1 1l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2"></path>
+              <path d="M19.4 15a7.97 7.97 0 0 0 .1-1 7.97 7.97 0 0 0-.1-1l2.1-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1l-.4-2.7h-4l-.4-2.7a8 8 0 0 0-1.7-1l-2.5-1-2 3.4L4.6 13a7.97 7.97 0 0 0-.1 1 7.97 7.97 0 0 0 .1 1l-2.1 1.6 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2.1-1.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
             </svg>
           </button>
           <button class="iconbtn" id="calendarBtn" title="Календарь" aria-label="Открыть календарь">
@@ -34,22 +41,25 @@
           </button>
         </div>
       </div>
-      <div class="version">V1.3.5</div>
+      <div class="version">V1.4.0 · Supabase</div>
       <div class="datestrip" id="dateStrip" aria-label="Дни (свайп)"></div>
     </header>
 
     <main class="content">
+      <!-- Главный экран (заказы по дням) -->
       <section class="view active" id="view-home">
         <div class="list" id="ordersList"></div>
         <div class="empty" id="emptyDay" style="display:none">На выбранную дату заказов пока нет.</div>
       </section>
 
+      <!-- Вкладка: заявки (из client_orders) -->
       <section class="view" id="view-requests">
         <div class="hint">Заявки от клиентов. Нажмите, чтобы раскрыть и принять/отклонить.</div>
         <div class="list" id="requestsList"></div>
         <div class="empty" id="emptyReq" style="display:none">Заявок пока нет.</div>
       </section>
 
+      <!-- Вкладка: настройки -->
       <section class="view" id="view-settings">
         <div class="settings">
           <div class="setcard">
@@ -95,6 +105,7 @@
         </div>
       </section>
 
+      <!-- Вкладка: профиль -->
       <section class="view" id="view-profile">
         <div class="profile">
           <h3>Профиль</h3>
@@ -121,6 +132,7 @@
         </div>
       </section>
 
+      <!-- Вкладка: календарь -->
       <section class="view" id="view-calendar">
         <div class="calendar-wrap">
           <div class="cal-head">
@@ -141,22 +153,23 @@
       </section>
     </main>
 
+    <!-- Нижняя навигация -->
     <nav class="nav">
       <div class="dock">
         <button class="navbtn circ active" data-nav="home" title="Главная (по дням)">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
         </button>
         <button class="navbtn fab" id="addOrderBtn" title="Добавить заказ" aria-label="Добавить заказ">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
           </svg>
         </button>
         <button class="navbtn circ" data-nav="requests" title="Заявки">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M3 12l3-7h12l3 7v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7z" stroke="currentColor" stroke-width="2"/>
-            <path d="M7 12h3a2 2 0 0 0 4 0h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M3 12l3-7h12l3 7v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7z" stroke="currentColor" stroke-width="2"></path>
+            <path d="M7 12h3a2 2 0 0 0 4 0h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
           </svg>
         </button>
       </div>
@@ -164,7 +177,7 @@
     </nav>
   </div>
 
-  <!-- Modals -->
+  <!-- Модалка: добавить заказ -->
   <div class="modal" id="orderModal" aria-hidden="true">
     <div class="sheet">
       <h3>Добавить заказ</h3>
@@ -212,6 +225,7 @@
     </div>
   </div>
 
+  <!-- Модалка: редактировать заказ -->
   <div class="modal" id="editModal" aria-hidden="true">
     <div class="sheet">
       <h3>Редактировать заказ</h3>
@@ -263,6 +277,7 @@
 
   <div class="toast" id="toast"><span></span></div>
 
+  <!-- Основная логика -->
   <script src="app.js"></script>
 </body>
 </html>
